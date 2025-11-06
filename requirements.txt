@@ -1,0 +1,44 @@
+# ============================================================
+# CORE FRAMEWORK
+# ============================================================
+flask
+werkzeug
+python-dotenv
+
+
+# ============================================================
+# DATABASE & SECURITY
+# ============================================================
+pymysql
+cryptography
+
+
+# ============================================================
+# MACHINE LEARNING & EMBEDDING
+# ============================================================
+torch
+torchvision
+sentence-transformers>=2.2.0
+numpy
+faiss-cpu
+
+
+# ============================================================
+# DOCUMENT PROCESSING
+# ============================================================
+pypdf
+python-docx
+
+
+# ============================================================
+# API COMMUNICATION
+# ============================================================
+requests
+
+
+# ============================================================
+# OPTIONAL: RERANKING (Uncomment jika ingin gunakan reranking)
+# ============================================================
+# Untuk reranking dengan cross-encoder (optional, bisa diaktifkan nanti)
+# Jika ingin aktifkan reranking, uncomment baris berikut:
+transformers>=4.30.0
