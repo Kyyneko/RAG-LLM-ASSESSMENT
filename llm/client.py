@@ -32,7 +32,7 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=90):
     
     Args:
         messages (list): List of message dicts with 'role' and 'content'
-        model (str): Model name
+        model (str): Model name (optional, defaults to LLM_MODEL env var)
         max_retries (int): Max retry attempts
         timeout (int): Request timeout
         
@@ -57,7 +57,9 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=90):
         if "role" not in msg or "content" not in msg:
             raise ValueError(f"Message {i} missing 'role' or 'content'")
     
-    model_name = model or os.getenv("META-LLAMA-4-SCOUT", "meta-llama/llama-4-scout:free")
+    # Use LLM_MODEL from .env if model not specified
+    # Fallback order: parameter > LLM_MODEL > google/gemma-3-27b-it:free (default)
+    model_name = model or os.getenv("LLM_MODEL", "google/gemma-3-27b-it:free")
     
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
