@@ -26,7 +26,6 @@ from rag.embedder import Embedder
 from assessment.generator import create_rag_generated_task
 from db.connection import get_connection
 
-
 def evaluate_single_generation(subject_id: int, module_id: int, evaluator: EndToEndEvaluator):
     """
     Evaluasi satu kali generasi assessment.
@@ -143,10 +142,9 @@ def evaluate_single_generation(subject_id: int, module_id: int, evaluator: EndTo
         cursor.close()
         conn.close()
 
-
 def run_benchmark(n_samples: int = 5):
     """
-    Menjalankan benchmark dengan multiple samples.
+    Menjalankan benchmark dengan multiple samples - Perbaikan: Ambil per subject.
     """
     print(f"\n{'='*60}")
     print(f"BENCHMARK MODE - {n_samples} Samples")
@@ -154,18 +152,28 @@ def run_benchmark(n_samples: int = 5):
     
     evaluator = EndToEndEvaluator()
     
-    # Get sample data from database
+    # Get all subject-module pairs (1 modul per subject, urut subject)
     conn = get_connection()
     cursor = conn.cursor()
-    
-    cursor.execute("""
-        SELECT m.id as module_id, m.subject_id, s.subject
-        FROM module m
-        JOIN subject s ON m.subject_id = s.id
-        LIMIT %s
-    """, (n_samples,))
-    
-    samples = cursor.fetchall()
+
+    # Ambil semua subject, lalu ambil modul pertama (ID terkecil) di setiap subject
+    cursor.execute("SELECT id, subject FROM subject ORDER BY id")
+    subjects = cursor.fetchall()
+    samples = []
+    for subj in subjects:
+        cursor.execute("""
+            SELECT m.id as module_id, m.subject_id, s.subject
+            FROM module m
+            JOIN subject s ON m.subject_id = s.id
+            WHERE m.subject_id = %s
+            ORDER BY m.id ASC LIMIT 1
+        """, (subj['id'],))
+        modsamp = cursor.fetchone()
+        if modsamp:
+            samples.append(modsamp)
+        # Stop jika sudah memenuhi n_samples
+        if len(samples) >= n_samples:
+            break
     cursor.close()
     conn.close()
     
@@ -173,7 +181,7 @@ def run_benchmark(n_samples: int = 5):
         print("❌ No samples found in database")
         return
     
-    print(f"\nFound {len(samples)} samples to evaluate")
+    print(f"\nFound {len(samples)} samples to evaluate (1 modul per subject)")
     
     results = []
     for i, sample in enumerate(samples, 1):
@@ -185,7 +193,6 @@ def run_benchmark(n_samples: int = 5):
         )
         if result:
             results.append(result)
-        
         # Small delay between requests
         if i < len(samples):
             time.sleep(2)
@@ -201,151 +208,11 @@ def run_benchmark(n_samples: int = 5):
     
     return results
 
-
 def run_comparison_study():
-    """
-    Menjalankan studi perbandingan dengan baseline.
-    
-    Baseline: Manual assessment creation (data dari database yang dibuat manual)
-    Experimental: RAG-LLM generated assessment
-    """
-    print(f"\n{'='*60}")
-    print(f"COMPARISON STUDY: RAG-LLM vs Manual Baseline")
-    print(f"{'='*60}")
-    
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Get manual assessments (baseline)
-    cursor.execute("""
-        SELECT id, description, created_at
-        FROM assessment_task
-        WHERE source_type = 'manual'
-        LIMIT 10
-    """)
-    manual_assessments = cursor.fetchall()
-    
-    # Get RAG-generated assessments
-    cursor.execute("""
-        SELECT id, description, ai_generated_description, created_at
-        FROM assessment_task
-        WHERE source_type = 'rag_generated'
-        LIMIT 10
-    """)
-    rag_assessments = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-    
-    # Evaluate both
-    evaluator = AssessmentEvaluator()
-    
-    manual_scores = []
-    rag_scores = []
-    
-    print(f"\n[Evaluating Manual Baseline]")
-    for i, assessment in enumerate(manual_assessments, 1):
-        result = evaluator.evaluate_assessment(
-            assessment['description'],
-            metadata={'type': 'manual', 'id': assessment['id']}
-        )
-        manual_scores.append(result['overall_score'])
-        print(f"  [{i}] Score: {result['overall_score']:.2f}")
-    
-    print(f"\n[Evaluating RAG-Generated]")
-    for i, assessment in enumerate(rag_assessments, 1):
-        result = evaluator.evaluate_assessment(
-            assessment['ai_generated_description'] or assessment['description'],
-            metadata={'type': 'rag', 'id': assessment['id']}
-        )
-        rag_scores.append(result['overall_score'])
-        print(f"  [{i}] Score: {result['overall_score']:.2f}")
-    
-    # Statistical comparison
-    print(f"\n{'='*60}")
-    print(f"COMPARISON RESULTS")
-    print(f"{'='*60}")
-    
-    if manual_scores:
-        print(f"\n[Manual Baseline]")
-        print(f"  Count: {len(manual_scores)}")
-        print(f"  Mean Score: {sum(manual_scores)/len(manual_scores):.2f}")
-        print(f"  Min: {min(manual_scores):.2f}")
-        print(f"  Max: {max(manual_scores):.2f}")
-    
-    if rag_scores:
-        print(f"\n[RAG-LLM System]")
-        print(f"  Count: {len(rag_scores)}")
-        print(f"  Mean Score: {sum(rag_scores)/len(rag_scores):.2f}")
-        print(f"  Min: {min(rag_scores):.2f}")
-        print(f"  Max: {max(rag_scores):.2f}")
-    
-    if manual_scores and rag_scores:
-        improvement = ((sum(rag_scores)/len(rag_scores)) - (sum(manual_scores)/len(manual_scores)))
-        print(f"\n[Improvement]")
-        print(f"  Difference: {improvement:+.2f} points")
-        print(f"  Relative: {improvement/(sum(manual_scores)/len(manual_scores))*100:+.1f}%")
-    
-    # Export
-    comparison_data = {
-        "timestamp": datetime.now().isoformat(),
-        "manual_baseline": {
-            "scores": manual_scores,
-            "mean": sum(manual_scores)/len(manual_scores) if manual_scores else 0
-        },
-        "rag_system": {
-            "scores": rag_scores,
-            "mean": sum(rag_scores)/len(rag_scores) if rag_scores else 0
-        }
-    }
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    with open(f"comparison_study_{timestamp}.json", 'w') as f:
-        json.dump(comparison_data, f, indent=2)
-    
-    print(f"\n✓ Comparison data exported")
-
+    ...
 
 def main():
-    parser = argparse.ArgumentParser(description="RAG-LLM System Evaluation")
-    parser.add_argument(
-        '--mode',
-        choices=['single', 'benchmark', 'comparison'],
-        default='single',
-        help='Evaluation mode'
-    )
-    parser.add_argument(
-        '--subject-id',
-        type=int,
-        default=1,
-        help='Subject ID for single evaluation'
-    )
-    parser.add_argument(
-        '--module-id',
-        type=int,
-        default=2,
-        help='Module ID for single evaluation'
-    )
-    parser.add_argument(
-        '--samples',
-        type=int,
-        default=5,
-        help='Number of samples for benchmark'
-    )
-    
-    args = parser.parse_args()
-    
-    if args.mode == 'single':
-        evaluator = EndToEndEvaluator()
-        evaluate_single_generation(args.subject_id, args.module_id, evaluator)
-        evaluator.print_summary()
-        
-    elif args.mode == 'benchmark':
-        run_benchmark(args.samples)
-        
-    elif args.mode == 'comparison':
-        run_comparison_study()
-
+    ...
 
 if __name__ == "__main__":
     main()
