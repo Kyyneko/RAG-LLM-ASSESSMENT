@@ -111,27 +111,6 @@ def get_subject_config(subject_name: str) -> dict:
     }
 
 
-def build_subject_specific_examples(config: dict) -> str:
-    """
-    Membuat contoh format soal yang spesifik untuk setiap mata kuliah.
-    """
-    language = config["language"]
-    focus = config["focus"]
-    tasks = "\n".join([f"   - {task}" for task in config["typical_tasks"][:3]])
-    
-    return f"""
-**KARAKTERISTIK SOAL {language.upper()}:**
-
-Fokus utama: {focus}
-
-Tipe tugas yang umum:
-{tasks}
-
-Style kode: {config["code_style"]}
-Tipe output: {config["output_type"]}
-"""
-
-
 def generate_assessment_description(
     subject_name: str,
     topic: str,
@@ -179,7 +158,6 @@ def generate_assessment_description(
     language = config["language"]
     concepts = config["concepts"]
     focus = config["focus"]
-    typical_tasks = config["typical_tasks"]
     code_style = config["code_style"]
     output_type = config["output_type"]
     
@@ -229,151 +207,168 @@ def generate_assessment_description(
         context_text = f"(Tidak ada konteks, buat soal umum tentang {concepts})"
 
     # ======================================================
-    # SUBJECT-SPECIFIC EXAMPLES
-    # ======================================================
-    subject_examples = build_subject_specific_examples(config)
-
-    # ======================================================
-    # ENHANCED SYSTEM MESSAGE (Module-Focused)
+    # ULTRA-STRICT SYSTEM MESSAGE
     # ======================================================
     system_message = {
         "role": "system",
-        "content": f"""Anda adalah asisten dosen ahli yang membuat soal praktikum untuk mata kuliah {subject_name}.
+        "content": f"""Anda adalah asisten dosen yang membuat soal praktikum SEDERHANA untuk mata kuliah {subject_name}.
 
-**KEAHLIAN KHUSUS ANDA:**
-- Bahasa/Teknologi: {language}
-- Fokus pembelajaran: {focus}
-- Konsep utama: {concepts}
+🚨 ATURAN ABSOLUT - TIDAK BOLEH DILANGGAR:
 
-**PRINSIP PEMBUATAN SOAL (SANGAT PENTING):**
-1. ⚠️ HANYA gunakan materi yang ADA di dalam konteks modul yang diberikan
-2. ⚠️ JANGAN menambahkan konsep atau materi yang TIDAK disebutkan di modul
-3. ⚠️ JANGAN membuat soal tentang topik lain di luar lingkup modul
-4. Soal harus 100% berdasarkan isi modul yang disediakan
-5. Jika modul membahas materi X, maka soal HANYA tentang materi X
-6. Tingkat kesulitan sesuai dengan kompleksitas materi di modul
-7. Implementasi menggunakan best practices {language}
-8. Kode harus lengkap, dapat dijalankan, dan production-ready
-9. Gunakan bahasa Indonesia formal dan profesional
+1. ❌ DILARANG KERAS menambahkan konsep yang TIDAK DISEBUTKAN EKSPLISIT di modul
+2. ❌ DILARANG menggunakan:
+   - try-except (kecuali EKSPLISIT ada di modul)
+   - function/def (kecuali EKSPLISIT ada di modul)  
+   - class (kecuali EKSPLISIT ada di modul)
+   - import library (kecuali EKSPLISIT ada di modul)
+   - konsep advanced apapun yang tidak ada di modul
 
-**BATASAN KETAT:**
-- Baca dengan TELITI seluruh konteks modul yang diberikan
-- Identifikasi konsep, fungsi, dan teknik yang SPESIFIK dijelaskan di modul
-- Buat soal yang HANYA menguji pemahaman materi yang ADA di modul
-- JANGAN asumsi mahasiswa sudah tahu konsep lain yang tidak di modul
+3. ✅ HANYA BOLEH menggunakan:
+   - Sintaks dasar yang DISEBUTKAN di modul
+   - Operator yang DITUNJUKKAN di modul
+   - Tipe data yang DIJELASKAN di modul
+   - Struktur kontrol yang ADA di modul (if, for, while, dll)
 
-**STRUKTUR OUTPUT WAJIB:**
-#SOAL - Deskripsi tugas yang jelas dan terstruktur (berdasarkan materi modul)
-#REQUIREMENTS - 5-7 persyaratan teknis sesuai materi modul
-#EXPECTED OUTPUT - {output_type}
-#KUNCI JAWABAN - {code_style}
+4. ✅ Soal harus:
+   - Sederhana dan langsung (straight-forward)
+   - Bisa diselesaikan dengan kode linear/sequential
+   - Tidak memerlukan modularisasi jika tidak diajarkan
+   - Sesuai dengan contoh-contoh di modul
 
-**LARANGAN:**
-- Jangan gunakan kata "HOTS" atau "C1-C6"
-- Jangan buat soal generic yang bisa untuk semua bahasa
-- Jangan gunakan placeholder atau kode tidak lengkap
-- Jangan tambahkan materi/konsep yang TIDAK ada di modul
-- Jangan membuat soal yang memerlukan pengetahuan di luar modul"""
+**BAHASA:** {language}
+**OUTPUT:** {output_type}
+
+**FORMAT WAJIB:**
+#SOAL - Deskripsi singkat dan jelas
+#REQUIREMENTS - 3-5 poin teknis SESUAI materi modul
+#EXPECTED OUTPUT - Contoh hasil program
+#KUNCI JAWABAN - Kode {language} sederhana tanpa konsep tambahan
+
+**PRINSIP:** 
+Jika modul hanya mengajarkan tipe data dan operator, maka soal HANYA boleh tentang tipe data dan operator. TITIK."""
     }
 
     # ======================================================
-    # ENHANCED USER INSTRUCTION (Module-Focused)
+    # ULTRA-STRICT USER INSTRUCTION
     # ======================================================
     user_instruction = f"""
-Buatkan tugas praktikum untuk mata kuliah **{subject_name}** dengan spesifikasi berikut:
+🎯 TUGAS: Buat soal praktikum SEDERHANA untuk {subject_name}
 
-=== INFORMASI DASAR ===
+=== INFORMASI ===
 Mata Kuliah: {subject_name}
-Kelas      : {class_name}
-Topik      : {topic}
-Teknologi  : {language}
+Kelas: {class_name}
+Topik: {topic}
+Bahasa: {language}
 
-=== KARAKTERISTIK SOAL ===
-{subject_examples}
+=== 🚨 ATURAN KETAT - BACA DENGAN TELITI ===
 
-=== ⚠️ INSTRUKSI PENTING - FOKUS PADA MODUL ===
+**STEP 1: ANALISIS MODUL**
+Baca konteks modul di bawah dan catat:
+- Konsep apa saja yang DISEBUTKAN EKSPLISIT?
+- Sintaks apa saja yang DITUNJUKKAN dengan CONTOH?
+- Fungsi/method apa yang DIDEMONSTRASIKAN?
+- Library apa yang DIGUNAKAN dalam contoh?
 
-1. BACA SELURUH KONTEKS MODUL dengan TELITI (lihat bagian "KONTEKS DARI MODUL" di bawah)
-2. IDENTIFIKASI materi spesifik yang diajarkan di modul tersebut
-3. BUAT SOAL yang HANYA menguji materi yang ADA di modul
-4. JANGAN menambahkan konsep, fungsi, atau teknik yang TIDAK dijelaskan di modul
-5. Pastikan mahasiswa bisa mengerjakan soal HANYA dengan mempelajari modul yang diberikan
+**STEP 2: VALIDASI KONSEP**
+Sebelum membuat soal, cek:
+☐ Apakah modul mengajarkan function? → Jika TIDAK, jangan pakai def
+☐ Apakah modul mengajarkan try-except? → Jika TIDAK, jangan pakai error handling
+☐ Apakah modul mengajarkan class? → Jika TIDAK, jangan pakai OOP
+☐ Apakah modul mengajarkan import? → Jika TIDAK, jangan import library
 
-Contoh:
-- Jika modul hanya membahas Stack dengan array, JANGAN buat soal tentang Stack dengan linked list
-- Jika modul hanya membahas fungsi dasar, JANGAN buat soal tentang class dan OOP
-- Jika modul hanya membahas SELECT dan WHERE, JANGAN buat soal tentang JOIN atau subquery
+**STEP 3: BUAT SOAL SEDERHANA**
+Soal harus:
+- Menggunakan HANYA konsep yang ada di modul
+- Kode jawaban sederhana (bukan modular/complex)
+- Tidak memerlukan "best practices" yang tidak diajarkan
+- Bisa dikerjakan mahasiswa yang HANYA belajar dari modul ini
 
-=== PANDUAN FITUR/KOMPONEN ===
-Buat soal dengan 3-5 fitur yang SESUAI dengan materi modul, contoh tipe:
-{chr(10).join([f"{i+1}. {task}" for i, task in enumerate(typical_tasks)])}
+**CONTOH BATASAN:**
 
-⚠️ TAPI: Sesuaikan dengan materi SPESIFIK yang ada di modul!
+❌ SALAH - Jika modul hanya tentang "Data Types & Operators":
+```python
+def hitung_luas(p, l):  # ← SALAH! Function tidak diajarkan
+    try:                # ← SALAH! Try-except tidak diajarkan
+        return p * l
+    except:
+        print("Error")
+```
+
+✅ BENAR - Jika modul hanya tentang "Data Types & Operators":
+```python
+panjang = float(input("Panjang: "))
+lebar = float(input("Lebar: "))
+luas = panjang * lebar  # Hanya operator yang diajarkan
+print("Luas:", luas)
+```
 """
 
     if custom_notes and custom_notes.strip():
         user_instruction += f"""
-=== CATATAN KHUSUS DARI ASISTEN LAB ===
+=== CATATAN KHUSUS ===
 {custom_notes.strip()}
 
-⚠️ PENTING: Ikuti semua poin di catatan khusus ini.
-Pastikan soal mengakomodasi permintaan spesifik di atas SAMBIL tetap fokus pada materi modul.
+⚠️ Ikuti catatan di atas SAMBIL tetap mematuhi aturan ketat modul.
 """
 
     user_instruction += f"""
-=== KONTEKS DARI MODUL (SUMBER UTAMA) ===
+=== ISI MODUL (SUMBER TUNGGAL) ===
 {context_text}
 
-⚠️ INSTRUKSI: Baca konteks di atas dengan SANGAT TELITI. Soal yang Anda buat HARUS 100% berdasarkan materi yang ada di konteks ini.
+🔍 INSTRUKSI ANALISIS:
+1. Baca SELURUH konteks modul di atas
+2. List konsep/sintaks yang EKSPLISIT disebutkan
+3. Buat soal yang HANYA menggunakan list tersebut
+4. JANGAN menambahkan konsep lain sama sekali
 
-=== FORMAT OUTPUT YANG DIHARAPKAN ===
+=== FORMAT OUTPUT ===
 
 #SOAL
-[Judul Tugas - Sesuai Materi Modul]
+[Judul Sederhana]
 
-Buatlah [jenis aplikasi/sistem] menggunakan {language} berdasarkan materi modul dengan fitur-fitur berikut:
+Buatlah program {language} sederhana yang [deskripsi task menggunakan HANYA konsep dari modul].
 
-1. [Fitur 1 - berdasarkan konsep SPESIFIK dari modul]
-2. [Fitur 2 - berdasarkan teknik yang DIAJARKAN di modul]
-3. [Fitur 3 - implementasi fungsi/method yang ADA di modul]
-4. [Fitur 4 - (opsional) kombinasi konsep dari modul]
+Contoh: "Buatlah program untuk menghitung luas persegi panjang menggunakan input, konversi tipe data, dan operator perkalian."
 
-Deskripsi skenario yang menggunakan HANYA materi dari modul...
+JANGAN: "Buatlah program dengan function untuk menghitung luas..."
 
 #REQUIREMENTS
-1. [Requirement 1 - menggunakan konsep dari modul]
-2. [Requirement 2 - menggunakan teknik dari modul]
-3. [Requirement 3 - implementasi sesuai contoh di modul]
-4. [Requirement 4 - error handling (jika diajarkan di modul)]
-5. [Requirement 5 - best practice sesuai level modul]
-6. [Requirement 6 - documentation]
-7. [Requirement 7 - testing sesuai materi modul]
+1. [Requirement sesuai materi modul]
+2. [Requirement sesuai materi modul]
+3. [Requirement sesuai materi modul]
+4. [Requirement sesuai materi modul]
+5. [Requirement sesuai materi modul]
+
+⚠️ Requirements HARUS tentang konsep yang ADA di modul
 
 #EXPECTED OUTPUT
-[Deskripsi output sesuai {output_type} dan materi modul]
-[Contoh konkret hasil eksekusi berdasarkan implementasi modul]
-[Screenshot/gambaran hasil akhir]
+```
+[Contoh output program sesuai {output_type}]
+```
 
 #KUNCI JAWABAN
-[Kode {language} lengkap dengan struktur {code_style}]
-[Gunakan HANYA fungsi/method/konsep yang ADA di modul]
-[Sertakan komentar untuk menjelaskan logika]
-[Pastikan kode dapat langsung dijalankan]
+```{language.lower()}
+# Kode sederhana tanpa function/class/try-except
+# (kecuali konsep tersebut ADA di modul)
+# Gunakan kode linear/sequential
+# Sesuai dengan style contoh di modul
+
+[kode di sini]
+```
 
 ---
 
-**CHECKLIST AKHIR SEBELUM SUBMIT:**
-☐ Apakah semua konsep dalam soal ADA di konteks modul?
-☐ Apakah mahasiswa bisa mengerjakan HANYA dengan mempelajari modul?
-☐ Apakah tidak ada materi tambahan di luar lingkup modul?
-☐ Apakah kode jawaban menggunakan HANYA teknik yang diajarkan di modul?
-☐ Apakah tingkat kesulitan sesuai dengan kompleksitas materi modul?
+✅ FINAL CHECK SEBELUM SUBMIT:
 
-**INSTRUKSI FINAL:**
-- Fokus 100% pada materi yang ADA di konteks modul
-- JANGAN menambahkan konsep lain yang tidak diajarkan
-- Buat soal yang realistis dan bisa dikerjakan dengan pengetahuan dari modul saja
-- Gunakan bahasa Indonesia formal dan profesional
+1. ☐ Apakah SEMUA konsep dalam kode ADA di modul?
+2. ☐ Apakah TIDAK ada function jika modul tidak mengajarkan function?
+3. ☐ Apakah TIDAK ada try-except jika modul tidak mengajarkan error handling?
+4. ☐ Apakah TIDAK ada import jika modul tidak menggunakan library?
+5. ☐ Apakah kode sesederhana contoh di modul?
+
+Jika ada yang TIDAK, REVISI soal Anda!
+
+**SUBMIT HANYA JIKA SEMUA ✅**
 """
 
     # ======================================================
