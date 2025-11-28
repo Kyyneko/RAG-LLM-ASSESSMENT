@@ -42,7 +42,7 @@ def generate_assessment():
        - Optional: notes
     
     2. Direct parameters mode (new UI support):
-       - Requires: mata_kuliah, modul, jumlah_tugas, tingkat_kesulitan, assistant_id
+       - Requires: subject_id, module_id, tingkat_kesulitan, assistant_id
        - Optional: session_id (if provided, links to existing session)
     
     Business Logic:
@@ -59,106 +59,102 @@ def generate_assessment():
         data = request.get_json()
         
         # Check which mode: session-based or direct parameters
-        is_direct_mode = "mata_kuliah" in data or "modul" in data
+        is_direct_mode = "subject_id" in data or "module_id" in data
         
         if is_direct_mode:
             # NEW MODE: Direct parameters from UI
-            mata_kuliah = data.get("mata_kuliah")
-            modul = data.get("modul")
-            jumlah_tugas = data.get("jumlah_tugas", 1)
+            subject_id = data.get("subject_id")
+            module_id = data.get("module_id")
             tingkat_kesulitan = data.get("tingkat_kesulitan", "Sedang")
             assistant_id = data.get("assistant_id")
             session_id = data.get("session_id")  # Optional
             notes = data.get("notes", "").strip()
             
-            if not all([mata_kuliah, modul, assistant_id]):
+            if not all([subject_id, module_id, assistant_id]):
                 logger.warning("Missing required fields for direct mode")
                 return jsonify({
-                    "error": "mata_kuliah, modul, dan assistant_id wajib diisi."
+                    "error": "subject_id, module_id, dan assistant_id wajib diisi."
                 }), 400
             
-            logger.info(f"Direct mode - mata_kuliah={mata_kuliah}, modul={modul}, jumlah_tugas={jumlah_tugas}, kesulitan={tingkat_kesulitan}")
-            
-            # Extract subject code from mata_kuliah (e.g., "IF2110 - Struktur Data" -> "IF2110")
-            subject_code = mata_kuliah.split("-")[0].strip() if "-" in mata_kuliah else mata_kuliah.strip()
+            logger.info(f"Direct mode - subject_id={subject_id}, module_id={module_id}, kesulitan={tingkat_kesulitan}")
             
             conn = get_connection()
             cursor = conn.cursor()
             
-            # Find subject_id by code or name
-            print(f"\n[Step 1] Mencari mata kuliah: {subject_code}")
+            # Get subject info by ID
+            print(f"\n[Step 1] Mencari subject dengan ID: {subject_id}")
             cursor.execute("""
                 SELECT id, subject
                 FROM subject
-                WHERE subject LIKE %s OR subject LIKE %s
-                LIMIT 1
-            """, (f"{subject_code}%", f"%{mata_kuliah}%"))
+                WHERE id = %s
+            """, (subject_id,))
             subject_row = cursor.fetchone()
             
             if not subject_row:
                 elapsed = time.time() - start_time
                 return jsonify({
-                    "error": f"Mata kuliah '{mata_kuliah}' tidak ditemukan.",
-                    "hint": "Pastikan kode mata kuliah sesuai dengan database.",
+                    "error": f"Subject dengan ID {subject_id} tidak ditemukan.",
                     "processing_time_seconds": round(elapsed, 2)
                 }), 404
             
-            subject_id = subject_row["id"]
             subject_name = subject_row["subject"]
             print(f"✓ Found subject: {subject_name} (ID: {subject_id})")
             
-            # If session_id not provided, try to find or create one
+            # Get module info by ID
+            print(f"[Step 2] Mencari module dengan ID: {module_id}")
+            cursor.execute("""
+                SELECT id, title, session_id, file_path
+                FROM module
+                WHERE id = %s
+            """, (module_id,))
+            module_row = cursor.fetchone()
+            
+            if not module_row:
+                elapsed = time.time() - start_time
+                return jsonify({
+                    "error": f"Module dengan ID {module_id} tidak ditemukan.",
+                    "processing_time_seconds": round(elapsed, 2)
+                }), 404
+            
+            module_title = module_row["title"]
+            module_session_id = module_row["session_id"]
+            print(f"✓ Found module: {module_title} (ID: {module_id})")
+            
+            # Use module's session_id if not provided
             if not session_id:
-                print(f"[Step 2] Session ID tidak disediakan, mencari session dengan modul: {modul}")
-                cursor.execute("""
-                    SELECT s.id, s.topic, c.class_name
-                    FROM session s
-                    LEFT JOIN class c ON s.class_id = c.id
-                    WHERE s.subject_id = %s AND (s.topic LIKE %s OR s.description LIKE %s)
-                    ORDER BY s.created_at DESC
-                    LIMIT 1
-                """, (subject_id, f"%{modul}%", f"%{modul}%"))
-                session_row = cursor.fetchone()
-                
-                if session_row:
-                    session_id = session_row["id"]
-                    topic = session_row["topic"]
-                    class_name = session_row["class_name"] or "Unknown"
-                    print(f"✓ Found existing session: {session_id}")
-                else:
-                    # Create a temporary topic name from modul
-                    topic = modul
-                    class_name = "Generated"
-                    print(f"⚠️ No matching session found, using topic: {topic}")
-            else:
-                # Get session info
-                print(f"[Step 2] Mengambil data session: {session_id}")
+                session_id = module_session_id
+                print(f"✓ Using module's session_id: {session_id}")
+            
+            # Get session info
+            if session_id:
+                print(f"[Step 3] Mengambil data session: {session_id}")
                 cursor.execute("""
                     SELECT s.id, s.topic, s.description, c.class_name
                     FROM session s
                     LEFT JOIN class c ON s.class_id = c.id
-                    WHERE s.id = %s AND s.subject_id = %s
-                """, (session_id, subject_id))
+                    WHERE s.id = %s
+                """, (session_id,))
                 session_row = cursor.fetchone()
                 
-                if not session_row:
-                    elapsed = time.time() - start_time
-                    return jsonify({
-                        "error": f"Session {session_id} tidak ditemukan untuk mata kuliah ini.",
-                        "processing_time_seconds": round(elapsed, 2)
-                    }), 404
-                
-                topic = session_row["topic"]
-                class_name = session_row["class_name"] or "Unknown"
-            
-            print(f"✓ Topic: {topic}, Class: {class_name}")
+                if session_row:
+                    topic = session_row["topic"] or module_title
+                    class_name = session_row["class_name"] or "Unknown"
+                    print(f"✓ Session found: {topic} ({class_name})")
+                else:
+                    # Use module title as topic
+                    topic = module_title
+                    class_name = "Generated"
+                    print(f"⚠️ Session not found, using module title as topic: {topic}")
+            else:
+                topic = module_title
+                class_name = "Generated"
+                print(f"⚠️ No session_id, using module title as topic: {topic}")
             
         else:
             # LEGACY MODE: Session-based (backward compatible)
             session_id = data.get("session_id")
             assistant_id = data.get("assistant_id")
             notes = data.get("notes", "").strip()
-            jumlah_tugas = 1  # Default for legacy mode
             tingkat_kesulitan = "Sedang"  # Default for legacy mode
             
             if not session_id or not assistant_id:
@@ -202,15 +198,18 @@ def generate_assessment():
             print(f"✓ Session: {subject_name} ({class_name}) - Topik: {topic}")
         
         # 3. Check existing assessment for THIS SESSION (BUSINESS LOGIC)
-        print("[Step 3] Memeriksa existing assessment...")
-        cursor.execute("""
-            SELECT id, title, generation_status, created_at
-            FROM assessment_task
-            WHERE session_id = %s
-            ORDER BY created_at DESC
-            LIMIT 1
-        """, (session_id,))
-        existing_task = cursor.fetchone()
+        print("[Step 4] Memeriksa existing assessment...")
+        if session_id:
+            cursor.execute("""
+                SELECT id, title, generation_status, created_at
+                FROM assessment_task
+                WHERE session_id = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (session_id,))
+            existing_task = cursor.fetchone()
+        else:
+            existing_task = None
         
         replace_task_id = None
         action_type = "create"
@@ -251,8 +250,17 @@ def generate_assessment():
             print("✓ Tidak ada assessment existing, akan membuat baru")
         
         # 4. Get module files
-        print("[Step 4] Mengambil file modul...")
-        if session_id:
+        print("[Step 5] Mengambil file modul...")
+        if is_direct_mode and module_id:
+            # Get specific module file by ID
+            cursor.execute("""
+                SELECT file_path, title
+                FROM module
+                WHERE id = %s
+            """, (module_id,))
+            modules = cursor.fetchall()
+        elif session_id:
+            # Get all modules for session
             cursor.execute("""
                 SELECT file_path, title
                 FROM module
@@ -282,12 +290,12 @@ def generate_assessment():
         print(f"✓ {len(modules)} modul ditemukan")
         
         # 5. Run RAG pipeline
-        print("[Step 5] Menjalankan pipeline indexing...")
+        print("[Step 6] Menjalankan pipeline indexing...")
         embedder = Embedder()
         vectorstore = process_files(file_paths, embedder)
         
         # 6. Retrieve context with reranking
-        print("[Step 6] Melakukan retrieval konteks...")
+        print("[Step 7] Melakukan retrieval konteks...")
         query = f"Materi praktikum tentang {topic} dalam mata kuliah {subject_name}"
         logger.info(f"Retrieving context for: {query}")
         
@@ -310,19 +318,17 @@ def generate_assessment():
         
         logger.info(f"Retrieved {len(context_snippets)} context snippets")
         
-        # 7. Build custom notes with new parameters
+        # 7. Build custom notes with parameters
         custom_notes_parts = []
         if notes:
             custom_notes_parts.append(notes)
         
-        custom_notes_parts.append(f"Jumlah tugas yang dibutuhkan: {jumlah_tugas}")
         custom_notes_parts.append(f"Tingkat kesulitan: {tingkat_kesulitan}")
         
         combined_notes = "\n".join(custom_notes_parts)
         
         # 8. Generate assessment (with enhanced notes)
-        print(f"[Step 7] Generating assessment ({action_type})...")
-        print(f"  - Jumlah tugas: {jumlah_tugas}")
+        print(f"[Step 8] Generating assessment ({action_type})...")
         print(f"  - Tingkat kesulitan: {tingkat_kesulitan}")
         if notes:
             print(f"  - Custom notes: {notes}")
@@ -349,9 +355,9 @@ def generate_assessment():
             "action": action_type,
             "task_id": task_id,
             "parameters": {
-                "mata_kuliah": subject_name,
-                "modul": topic,
-                "jumlah_tugas": jumlah_tugas,
+                "subject_id": subject_id,
+                "subject_name": subject_name,
+                "module_title": topic,
                 "tingkat_kesulitan": tingkat_kesulitan
             },
             "processing_time_seconds": round(elapsed_time, 2)
