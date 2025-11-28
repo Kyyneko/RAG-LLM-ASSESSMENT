@@ -234,7 +234,7 @@ def generate_assessment_description(
     subject_examples = build_subject_specific_examples(config)
 
     # ======================================================
-    # ENHANCED SYSTEM MESSAGE (Subject-Aware)
+    # ENHANCED SYSTEM MESSAGE (Module-Focused)
     # ======================================================
     system_message = {
         "role": "system",
@@ -245,17 +245,26 @@ def generate_assessment_description(
 - Fokus pembelajaran: {focus}
 - Konsep utama: {concepts}
 
-**PRINSIP PEMBUATAN SOAL:**
-1. Soal harus mencerminkan karakteristik khas {subject_name}
-2. Tingkat kesulitan sesuai dengan topik "{topic}"
-3. Implementasi menggunakan best practices {language}
-4. Kode harus lengkap, dapat dijalankan, dan production-ready
-5. Sertakan komentar yang jelas untuk bagian-bagian penting
-6. Gunakan bahasa Indonesia formal dan profesional
+**PRINSIP PEMBUATAN SOAL (SANGAT PENTING):**
+1. ⚠️ HANYA gunakan materi yang ADA di dalam konteks modul yang diberikan
+2. ⚠️ JANGAN menambahkan konsep atau materi yang TIDAK disebutkan di modul
+3. ⚠️ JANGAN membuat soal tentang topik lain di luar lingkup modul
+4. Soal harus 100% berdasarkan isi modul yang disediakan
+5. Jika modul membahas materi X, maka soal HANYA tentang materi X
+6. Tingkat kesulitan sesuai dengan kompleksitas materi di modul
+7. Implementasi menggunakan best practices {language}
+8. Kode harus lengkap, dapat dijalankan, dan production-ready
+9. Gunakan bahasa Indonesia formal dan profesional
+
+**BATASAN KETAT:**
+- Baca dengan TELITI seluruh konteks modul yang diberikan
+- Identifikasi konsep, fungsi, dan teknik yang SPESIFIK dijelaskan di modul
+- Buat soal yang HANYA menguji pemahaman materi yang ADA di modul
+- JANGAN asumsi mahasiswa sudah tahu konsep lain yang tidak di modul
 
 **STRUKTUR OUTPUT WAJIB:**
-#SOAL - Deskripsi tugas yang jelas dan terstruktur
-#REQUIREMENTS - 5-7 persyaratan teknis spesifik {language}
+#SOAL - Deskripsi tugas yang jelas dan terstruktur (berdasarkan materi modul)
+#REQUIREMENTS - 5-7 persyaratan teknis sesuai materi modul
 #EXPECTED OUTPUT - {output_type}
 #KUNCI JAWABAN - {code_style}
 
@@ -263,11 +272,12 @@ def generate_assessment_description(
 - Jangan gunakan kata "HOTS" atau "C1-C6"
 - Jangan buat soal generic yang bisa untuk semua bahasa
 - Jangan gunakan placeholder atau kode tidak lengkap
-- Jangan abaikan karakteristik khusus {subject_name}"""
+- Jangan tambahkan materi/konsep yang TIDAK ada di modul
+- Jangan membuat soal yang memerlukan pengetahuan di luar modul"""
     }
 
     # ======================================================
-    # ENHANCED USER INSTRUCTION
+    # ENHANCED USER INSTRUCTION (Module-Focused)
     # ======================================================
     user_instruction = f"""
 Buatkan tugas praktikum untuk mata kuliah **{subject_name}** dengan spesifikasi berikut:
@@ -281,17 +291,24 @@ Teknologi  : {language}
 === KARAKTERISTIK SOAL ===
 {subject_examples}
 
+=== ⚠️ INSTRUKSI PENTING - FOKUS PADA MODUL ===
+
+1. BACA SELURUH KONTEKS MODUL dengan TELITI (lihat bagian "KONTEKS DARI MODUL" di bawah)
+2. IDENTIFIKASI materi spesifik yang diajarkan di modul tersebut
+3. BUAT SOAL yang HANYA menguji materi yang ADA di modul
+4. JANGAN menambahkan konsep, fungsi, atau teknik yang TIDAK dijelaskan di modul
+5. Pastikan mahasiswa bisa mengerjakan soal HANYA dengan mempelajari modul yang diberikan
+
+Contoh:
+- Jika modul hanya membahas Stack dengan array, JANGAN buat soal tentang Stack dengan linked list
+- Jika modul hanya membahas fungsi dasar, JANGAN buat soal tentang class dan OOP
+- Jika modul hanya membahas SELECT dan WHERE, JANGAN buat soal tentang JOIN atau subquery
+
 === PANDUAN FITUR/KOMPONEN ===
-Buat soal dengan 4-6 fitur yang relevan dengan {subject_name}, misalnya:
+Buat soal dengan 3-5 fitur yang SESUAI dengan materi modul, contoh tipe:
 {chr(10).join([f"{i+1}. {task}" for i, task in enumerate(typical_tasks)])}
 
-=== REQUIREMENTS TEKNIS ===
-Pastikan requirements mencakup:
-- Konsep inti: {concepts}
-- Best practices {language}
-- Error handling dan validasi
-- Code organization dan readability
-- Testing atau demonstration case
+⚠️ TAPI: Sesuaikan dengan materi SPESIFIK yang ada di modul!
 """
 
     if custom_notes and custom_notes.strip():
@@ -300,54 +317,62 @@ Pastikan requirements mencakup:
 {custom_notes.strip()}
 
 ⚠️ PENTING: Ikuti semua poin di catatan khusus ini.
-Pastikan soal mengakomodasi permintaan spesifik di atas.
+Pastikan soal mengakomodasi permintaan spesifik di atas SAMBIL tetap fokus pada materi modul.
 """
 
     user_instruction += f"""
-=== KONTEKS DARI MODUL ===
+=== KONTEKS DARI MODUL (SUMBER UTAMA) ===
 {context_text}
+
+⚠️ INSTRUKSI: Baca konteks di atas dengan SANGAT TELITI. Soal yang Anda buat HARUS 100% berdasarkan materi yang ada di konteks ini.
 
 === FORMAT OUTPUT YANG DIHARAPKAN ===
 
 #SOAL
-[Judul Tugas yang Menarik]
+[Judul Tugas - Sesuai Materi Modul]
 
-Buatlah [jenis aplikasi/sistem] menggunakan {language} dengan fitur-fitur berikut:
+Buatlah [jenis aplikasi/sistem] menggunakan {language} berdasarkan materi modul dengan fitur-fitur berikut:
 
-1. [Fitur 1 - spesifik untuk {language}]
-2. [Fitur 2 - terapkan konsep {concepts}]
-3. [Fitur 3 - dengan error handling]
-4. [Fitur 4 - dengan validasi]
-5. [Fitur 5 - (opsional) fitur tambahan]
+1. [Fitur 1 - berdasarkan konsep SPESIFIK dari modul]
+2. [Fitur 2 - berdasarkan teknik yang DIAJARKAN di modul]
+3. [Fitur 3 - implementasi fungsi/method yang ADA di modul]
+4. [Fitur 4 - (opsional) kombinasi konsep dari modul]
 
-Deskripsi detail tentang skenario atau use case...
+Deskripsi skenario yang menggunakan HANYA materi dari modul...
 
 #REQUIREMENTS
-1. [Requirement teknis 1 - spesifik {language}]
-2. [Requirement teknis 2 - best practice]
-3. [Requirement teknis 3 - konsep utama]
-4. [Requirement teknis 4 - error handling]
-5. [Requirement teknis 5 - code quality]
-6. [Requirement teknis 6 - documentation]
-7. [Requirement teknis 7 - testing/demo]
+1. [Requirement 1 - menggunakan konsep dari modul]
+2. [Requirement 2 - menggunakan teknik dari modul]
+3. [Requirement 3 - implementasi sesuai contoh di modul]
+4. [Requirement 4 - error handling (jika diajarkan di modul)]
+5. [Requirement 5 - best practice sesuai level modul]
+6. [Requirement 6 - documentation]
+7. [Requirement 7 - testing sesuai materi modul]
 
 #EXPECTED OUTPUT
-[Deskripsi output sesuai {output_type}]
-[Contoh konkret hasil eksekusi atau tampilan]
-[Screenshot/gambaran hasil akhir jika perlu]
+[Deskripsi output sesuai {output_type} dan materi modul]
+[Contoh konkret hasil eksekusi berdasarkan implementasi modul]
+[Screenshot/gambaran hasil akhir]
 
 #KUNCI JAWABAN
 [Kode {language} lengkap dengan struktur {code_style}]
-[Sertakan komentar untuk menjelaskan logika penting]
+[Gunakan HANYA fungsi/method/konsep yang ADA di modul]
+[Sertakan komentar untuk menjelaskan logika]
 [Pastikan kode dapat langsung dijalankan]
 
 ---
 
-**INSTRUKSI AKHIR:**
-- Buat soal yang KHAS untuk {subject_name}, bukan soal generic
-- Gunakan terminologi dan pattern yang spesifik untuk {language}
-- Kode harus production-ready dengan error handling lengkap
-- Output harus sesuai dengan {output_type}
+**CHECKLIST AKHIR SEBELUM SUBMIT:**
+☐ Apakah semua konsep dalam soal ADA di konteks modul?
+☐ Apakah mahasiswa bisa mengerjakan HANYA dengan mempelajari modul?
+☐ Apakah tidak ada materi tambahan di luar lingkup modul?
+☐ Apakah kode jawaban menggunakan HANYA teknik yang diajarkan di modul?
+☐ Apakah tingkat kesulitan sesuai dengan kompleksitas materi modul?
+
+**INSTRUKSI FINAL:**
+- Fokus 100% pada materi yang ADA di konteks modul
+- JANGAN menambahkan konsep lain yang tidak diajarkan
+- Buat soal yang realistis dan bisa dikerjakan dengan pengetahuan dari modul saja
 - Gunakan bahasa Indonesia formal dan profesional
 """
 
