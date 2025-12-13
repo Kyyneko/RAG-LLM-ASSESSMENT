@@ -97,13 +97,13 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
             
             if response.status_code == 429:
                 wait_time = min(2 ** attempt, 32)
-                print(f"⚠️ Rate limit. Retrying in {wait_time}s...")
+                print(f"WARNING: Rate limit. Retrying in {wait_time}s...")
                 time.sleep(wait_time)
                 continue
             
             if response.status_code != 200:
                 error_detail = response.text
-                print(f"❌ HTTP Error {response.status_code}")
+                print(f"ERROR: HTTP Error {response.status_code}")
                 print(f"Response body: {error_detail[:1000]}")
                 
                 # Try to parse error as JSON
@@ -130,7 +130,7 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
             try:
                 data = response.json()
             except json.JSONDecodeError as e:
-                print(f"❌ Failed to parse JSON response: {str(e)}")
+                print(f"ERROR: Failed to parse JSON response: {str(e)}")
                 print(f"Raw response: {response.text[:500]}")
                 raise ModelError(f"Invalid JSON response from API: {str(e)}")
             
@@ -144,12 +144,12 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
                     error_msg = error_info.get("message", str(error_info))
                 else:
                     error_msg = str(error_info)
-                print(f"❌ API returned error: {error_msg}")
+                print(f"ERROR: API returned error: {error_msg}")
                 raise ModelError(f"OpenRouter API Error: {error_msg}")
             
             # Check for choices
             if "choices" not in data:
-                print(f"❌ Response missing 'choices' field")
+                print(f"ERROR: Response missing 'choices' field")
                 print(f"Available fields: {list(data.keys())}")
                 print(f"Full response: {json.dumps(data, indent=2)[:1000]}")
                 
@@ -157,42 +157,42 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
                 if "model" in data and "status" in data:
                     if data.get("status") == "loading":
                         wait_time = min(2 ** attempt, 30)
-                        print(f"⚠️ Model is still loading. Waiting {wait_time}s...")
+                        print(f"WARNING: Model is still loading. Waiting {wait_time}s...")
                         time.sleep(wait_time)
                         continue
                 
                 raise ModelError(f"Response missing 'choices' field. Response: {json.dumps(data)[:500]}")
             
             if len(data["choices"]) == 0:
-                print(f"❌ Choices array is empty")
+                print(f"ERROR: Choices array is empty")
                 raise ModelError("Response 'choices' array is empty")
             
             # Extract content
             choice = data["choices"][0]
             if "message" not in choice:
-                print(f"❌ Choice missing 'message' field")
+                print(f"ERROR: Choice missing 'message' field")
                 print(f"Choice structure: {json.dumps(choice, indent=2)}")
                 raise ModelError("Choice missing 'message' field")
             
             content = choice["message"].get("content", "")
             if not content:
-                print(f"❌ Message content is empty")
+                print(f"ERROR: Message content is empty")
                 raise ModelError("Message content is empty")
             
             finish_reason = choice.get("finish_reason", "")
             
             # Check for truncation
             if finish_reason == "length":
-                print("⚠️ WARNING: Response truncated (hit max_tokens limit)")
+                print("WARNING: Response truncated (hit max_tokens limit)")
             
             # Log usage stats
             if "usage" in data:
                 usage = data["usage"]
-                print(f"✓ Success | Tokens: {usage.get('total_tokens', 'N/A')} "
+                print(f"SUCCESS | Tokens: {usage.get('total_tokens', 'N/A')} "
                       f"(prompt: {usage.get('prompt_tokens', 'N/A')}, "
                       f"completion: {usage.get('completion_tokens', 'N/A')})")
-            
-            print(f"✓ Generated {len(content)} characters")
+
+            print(f"SUCCESS | Generated {len(content)} characters")
             return content
         
         except ModelError:
@@ -206,21 +206,21 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
                 raise
         
         except requests.exceptions.Timeout:
-            print(f"⚠️ Timeout on attempt {attempt} (waited {timeout}s)")
+            print(f"WARNING: Timeout on attempt {attempt} (waited {timeout}s)")
             if attempt < max_retries:
                 time.sleep(2 ** attempt)
             else:
                 raise LLMClientError(f"Timeout after {max_retries} attempts")
         
         except requests.exceptions.RequestException as e:
-            print(f"⚠️ Request error: {str(e)}")
+            print(f"WARNING: Request error: {str(e)}")
             if attempt < max_retries:
                 time.sleep(2 ** attempt)
             else:
                 raise LLMClientError(f"Request failed: {str(e)}")
         
         except json.JSONDecodeError as e:
-            print(f"⚠️ Invalid JSON response on attempt {attempt}: {str(e)}")
+            print(f"WARNING: Invalid JSON response on attempt {attempt}: {str(e)}")
             print(f"Raw response: {response.text[:500]}")
             if attempt < max_retries:
                 time.sleep(2)

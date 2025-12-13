@@ -128,7 +128,7 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
             
             if new_docs_count == 0:
                 # Tidak ada update, gunakan cache
-                print(f"✓ Menggunakan cached vector store untuk subject {subject_id}")
+                print(f"SUCCESS: Menggunakan cached vector store untuk subject {subject_id}")
                 conn.close()
                 
                 try:
@@ -141,7 +141,7 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
                     }
                     return vectorstore, metadata
                 except Exception as e:
-                    print(f"⚠️  Cache loading gagal: {e}. Rebuilding...")
+                    print(f"WARNING:  Cache loading gagal: {e}. Rebuilding...")
         
         conn.close()
     
@@ -154,7 +154,7 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
         vectorstore.save_to_disk(index_path, data_path)
         metadata["cached"] = True
     except Exception as e:
-        print(f"⚠️  Gagal menyimpan cache: {e}")
+        print(f"WARNING:  Gagal menyimpan cache: {e}")
         metadata["cached"] = False
     
     return vectorstore, metadata
@@ -206,7 +206,7 @@ def _build_vectorstore_from_db(subject_id: int):
                 file_name = doc["file_name"]
                 
                 if not os.path.exists(file_path):
-                    print(f"⚠️  File tidak ditemukan: {file_path}")
+                    print(f"WARNING:  File tidak ditemukan: {file_path}")
                     metadata["failed_files"].append(file_name)
                     continue
                 
@@ -248,10 +248,10 @@ def _build_vectorstore_from_db(subject_id: int):
                 """, (doc_id,))
                 
                 conn.commit()
-                print(f"  ✓ {len(chunks)} chunks indexed")
+                print(f"  SUCCESS: {len(chunks)} chunks indexed")
         
     except Exception as e:
-        print(f"❌ Kesalahan dalam build_vectorstore_for_subject: {str(e)}")
+        print(f"ERROR: Kesalahan dalam build_vectorstore_for_subject: {str(e)}")
         conn.rollback()
         raise e
     finally:

@@ -142,7 +142,7 @@ class VectorStore:
                 'dim': self.dim
             }, f)
         
-        print(f"✓ Vector store disimpan ke {index_path}")
+        print(f"SUCCESS: Vector store disimpan ke {index_path}")
     
     @classmethod
     def load_from_disk(cls, index_path: str, data_path: str):
@@ -168,7 +168,7 @@ class VectorStore:
         instance.texts = data['texts']
         instance.metadata = data.get('metadata', [])
         
-        print(f"✓ Vector store dimuat dari cache: {len(instance.texts)} chunks")
+        print(f"SUCCESS: Vector store dimuat dari cache: {len(instance.texts)} chunks")
         return instance
     
     def get_stats(self) -> dict:

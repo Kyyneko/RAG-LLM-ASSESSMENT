@@ -59,7 +59,7 @@ def get_connection():
         "port": int(os.getenv("MYSQL_PORT", "3306")),
         "user": os.getenv("MYSQL_USER", "root"),
         "password": password,
-        "db": os.getenv("MYSQL_DB", "rag_assessment_simple"),
+        "db": os.getenv("MYSQL_DB", "silab_db"),
         "charset": "utf8mb4",
         "cursorclass": pymysql.cursors.DictCursor,
         "autocommit": False

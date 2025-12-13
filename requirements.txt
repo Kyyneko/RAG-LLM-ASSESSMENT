@@ -42,3 +42,6 @@ requests
 # Untuk reranking dengan cross-encoder (optional, bisa diaktifkan nanti)
 # Jika ingin aktifkan reranking, uncomment baris berikut:
 transformers>=4.30.0
+
+
+pandas

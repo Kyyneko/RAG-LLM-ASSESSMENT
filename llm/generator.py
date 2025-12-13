@@ -1,4 +1,9 @@
+import time
+import logging
 from .client import call_openrouter
+from db.generation_logger import generation_logger
+
+logger = logging.getLogger(__name__)
 
 # ======================================================
 # ENHANCED SUBJECT-SPECIFIC CONFIGURATIONS
@@ -118,6 +123,9 @@ def generate_assessment_description(
     context_snippets: list,
     module_names: list[str] = None,
     custom_notes: str = None,
+    assessment_task_id: int = None,
+    generation_type: str = "assessment",
+    generated_by: int = None,
 ) -> str:
     """
     Membuat deskripsi tugas praktikum lintas mata kuliah (multi-language).
@@ -129,9 +137,55 @@ def generate_assessment_description(
       - OOP JAVA (Java)
       - Pemrograman Mobile (Kotlin/Java)
 
+    Args:
+        subject_name (str): Nama mata kuliah
+        topic (str): Topik materi
+        class_name (str): Nama kelas
+        context_snippets (list): Konteks materi
+        module_names (list): Nama modul
+        custom_notes (str): Catatan khusus
+        assessment_task_id (int): ID assessment task untuk logging
+        generation_type (str): Tipe generasi ('assessment', 'preview', 'test')
+        generated_by (int): ID user yang melakukan request
+
     Returns:
         str: Deskripsi soal ber-tag (#SOAL, #REQUIREMENTS, #EXPECTED OUTPUT, #KUNCI JAWABAN)
     """
+
+    # ======================================================
+    # LOG GENERATION REQUEST
+    # ======================================================
+    generation_id = None
+
+    try:
+        # Log the generation request
+        prompt_parameters = {
+            "subject_name": subject_name,
+            "topic": topic,
+            "class_name": class_name,
+            "custom_notes": custom_notes,
+            "context_count": len(context_snippets) if context_snippets else 0,
+            "module_count": len(module_names) if module_names else 0
+        }
+
+        source_materials = {
+            "modules": module_names or [],
+            "context_snippets": len(context_snippets) if context_snippets else 0,
+            "context_preview": [text[:200] + "..." if len(text) > 200 else text
+                              for text in (context_snippets[:3] if context_snippets else [])]
+        }
+
+        generation_id = generation_logger.log_generation_request(
+            assessment_task_id=assessment_task_id,
+            generation_type=generation_type,
+            prompt_parameters=prompt_parameters,
+            source_materials=source_materials,
+            model_used="OpenRouter (default)",
+            generated_by=generated_by
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to log generation request: {str(e)}")
 
     # ======================================================
     # VALIDATION & DEBUG LOGGING
@@ -141,6 +195,7 @@ def generate_assessment_description(
     print(f"[DEBUG] Topic   : {topic}")
     print(f"[DEBUG] Class   : {class_name}")
     print(f"[DEBUG] Context : {len(context_snippets) if context_snippets else 0}")
+    print(f"[DEBUG] Gen ID  : {generation_id}")
     if custom_notes:
         print(f"[DEBUG] Custom notes: {custom_notes[:100]}...")
 
@@ -160,7 +215,7 @@ def generate_assessment_description(
     focus = config["focus"]
     code_style = config["code_style"]
     output_type = config["output_type"]
-    
+
     print(f"[DEBUG] Detected language: {language}")
     print(f"[DEBUG] Focus area: {focus}")
 
@@ -203,7 +258,7 @@ def generate_assessment_description(
         context_text = f"{module_info}\n\n" + "\n\n".join(context_parts)
         print(f"[DEBUG] Context length: {len(context_text)} chars")
     else:
-        print("⚠️ WARNING: No context!")
+        print("WARNING: WARNING: No context!")
         context_text = f"(Tidak ada konteks, buat soal umum tentang {concepts})"
 
     # ======================================================
@@ -213,12 +268,12 @@ def generate_assessment_description(
         "role": "system",
         "content": f"""Anda adalah asisten dosen yang membuat soal praktikum SEDERHANA untuk mata kuliah {subject_name}.
 
-🚨 ATURAN ABSOLUT - TIDAK BOLEH DILANGGAR:
+ALERT: ATURAN ABSOLUT - TIDAK BOLEH DILANGGAR:
 
-1. ❌ DILARANG KERAS menambahkan konsep yang TIDAK DISEBUTKAN EKSPLISIT di modul
-2. ❌ DILARANG menggunakan:
+1. ERROR: DILARANG KERAS menambahkan konsep yang TIDAK DISEBUTKAN EKSPLISIT di modul
+2. ERROR: DILARANG menggunakan:
    - try-except (kecuali EKSPLISIT ada di modul)
-   - function/def (kecuali EKSPLISIT ada di modul)  
+   - function/def (kecuali EKSPLISIT ada di modul)
    - class (kecuali EKSPLISIT ada di modul)
    - import library (kecuali EKSPLISIT ada di modul)
    - konsep advanced apapun yang tidak ada di modul
@@ -244,7 +299,7 @@ def generate_assessment_description(
 #EXPECTED OUTPUT - Contoh hasil program
 #KUNCI JAWABAN - Kode {language} sederhana tanpa konsep tambahan
 
-**PRINSIP:** 
+**PRINSIP:**
 Jika modul hanya mengajarkan tipe data dan operator, maka soal HANYA boleh tentang tipe data dan operator. TITIK."""
     }
 
@@ -252,7 +307,7 @@ Jika modul hanya mengajarkan tipe data dan operator, maka soal HANYA boleh tenta
     # ULTRA-STRICT USER INSTRUCTION
     # ======================================================
     user_instruction = f"""
-🎯 TUGAS: Buat soal praktikum SEDERHANA untuk {subject_name}
+TARGET: TUGAS: Buat soal praktikum SEDERHANA untuk {subject_name}
 
 === INFORMASI ===
 Mata Kuliah: {subject_name}
@@ -260,7 +315,7 @@ Kelas: {class_name}
 Topik: {topic}
 Bahasa: {language}
 
-=== 🚨 ATURAN KETAT - BACA DENGAN TELITI ===
+=== ALERT: ATURAN KETAT - BACA DENGAN TELITI ===
 
 **STEP 1: ANALISIS MODUL**
 Baca konteks modul di bawah dan catat:
@@ -285,7 +340,7 @@ Soal harus:
 
 **CONTOH BATASAN:**
 
-❌ SALAH - Jika modul hanya tentang "Data Types & Operators":
+ERROR: SALAH - Jika modul hanya tentang "Data Types & Operators":
 ```python
 def hitung_luas(p, l):  # ← SALAH! Function tidak diajarkan
     try:                # ← SALAH! Try-except tidak diajarkan
@@ -308,14 +363,14 @@ print("Luas:", luas)
 === CATATAN KHUSUS ===
 {custom_notes.strip()}
 
-⚠️ Ikuti catatan di atas SAMBIL tetap mematuhi aturan ketat modul.
+WARNING: Ikuti catatan di atas SAMBIL tetap mematuhi aturan ketat modul.
 """
 
     user_instruction += f"""
 === ISI MODUL (SUMBER TUNGGAL) ===
 {context_text}
 
-🔍 INSTRUKSI ANALISIS:
+SEARCH: INSTRUKSI ANALISIS:
 1. Baca SELURUH konteks modul di atas
 2. List konsep/sintaks yang EKSPLISIT disebutkan
 3. Buat soal yang HANYA menggunakan list tersebut
@@ -339,7 +394,7 @@ JANGAN: "Buatlah program dengan function untuk menghitung luas..."
 4. [Requirement sesuai materi modul]
 5. [Requirement sesuai materi modul]
 
-⚠️ Requirements HARUS tentang konsep yang ADA di modul
+WARNING: Requirements HARUS tentang konsep yang ADA di modul
 
 #EXPECTED OUTPUT
 ```
@@ -389,23 +444,55 @@ Jika ada yang TIDAK, REVISI soal Anda!
     # CALL LLM
     # ======================================================
     print(f"\n[DEBUG] Calling LLM for {language}...")
-    result = call_openrouter(messages)
+    llm_start_time = time.time()
 
-    if not result or not result.strip():
-        raise Exception("LLM returned empty response.")
+    try:
+        result = call_openrouter(messages)
+        execution_time_ms = int((time.time() - llm_start_time) * 1000)
 
-    print(f"\n[DEBUG] Response: {len(result)} chars")
-    print(f"Preview: {result[:150]}...")
+        if not result or not result.strip():
+            raise Exception("LLM returned empty response.")
 
-    # ======================================================
-    # VALIDATE TAGS
-    # ======================================================
-    required_tags = ["#SOAL", "#REQUIREMENTS", "#EXPECTED OUTPUT", "#KUNCI JAWABAN"]
-    missing = [t for t in required_tags if t not in result]
+        print(f"\n[DEBUG] Response: {len(result)} chars")
+        print(f"Preview: {result[:150]}...")
 
-    if missing:
-        print(f"⚠️ Missing tags: {', '.join(missing)}")
-    else:
-        print("✓ All required tags present")
+        # ======================================================
+        # LOG SUCCESS
+        # ======================================================
+        if generation_id:
+            try:
+                generation_logger.update_generation_success(
+                    generation_id=generation_id,
+                    generated_content=result,
+                    execution_time_ms=execution_time_ms
+                )
+            except Exception as e:
+                logger.error(f"Failed to log generation success: {str(e)}")
 
-    return result
+        # ======================================================
+        # VALIDATE TAGS
+        # ======================================================
+        required_tags = ["#SOAL", "#REQUIREMENTS", "#EXPECTED OUTPUT", "#KUNCI JAWABAN"]
+        missing = [t for t in required_tags if t not in result]
+
+        if missing:
+            print(f"WARNING: Missing tags: {', '.join(missing)}")
+        else:
+            print("SUCCESS: All required tags present")
+
+        return result
+
+    except Exception as e:
+        # ======================================================
+        # LOG ERROR
+        # ======================================================
+        if generation_id:
+            try:
+                generation_logger.update_generation_error(
+                    generation_id=generation_id,
+                    error_message=str(e)
+                )
+            except Exception as log_error:
+                logger.error(f"Failed to log generation error: {str(log_error)}")
+
+        raise e

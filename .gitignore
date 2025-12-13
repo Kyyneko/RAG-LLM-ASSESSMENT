@@ -27,6 +27,8 @@ upload/
 # Logs
 *.log
 
+*.claude
+
 # Model cache
 .cache/
 models/

@@ -28,12 +28,14 @@ def create_app() -> Flask:
     def home():
         """Endpoint utama untuk memverifikasi status API."""
         return jsonify({
-            "message": "SI-LAB RAG Assessment API is running.",
+            "message": "SI-LAB RAG Assessment Generator API is running.",
             "version": "2.0",
             "endpoints": {
                 "generate": "/api/rag/generate",
                 "upload_module": "/api/rag/upload-module",
-                "generation_history": "/api/rag/generation-history/<subject_id>"
+                "generation_history": "/api/rag/generation-history/<subject_id>",
+                "preview_mode": "/api/rag/preview",
+                "health_check": "/api/rag/health"
             }
         })
 
