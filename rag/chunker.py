@@ -1,5 +1,3 @@
-# rag/chunker.py
-
 def create_chunks(text: str, max_chars: int = 1500, overlap: int = 300):
     """
     Memecah teks dengan mempertimbangkan struktur semantik (paragraf dan kalimat).
@@ -23,7 +21,6 @@ def create_chunks(text: str, max_chars: int = 1500, overlap: int = 300):
     if not text or not text.strip():
         return
     
-    # Pisahkan berdasarkan paragraf terlebih dahulu
     paragraphs = text.split('\n\n')
     current_chunk = ""
     previous_chunk_tail = ""
@@ -33,27 +30,22 @@ def create_chunks(text: str, max_chars: int = 1500, overlap: int = 300):
         if not para:
             continue
         
-        # Jika menambahkan paragraf ini tidak melebihi limit
-        if len(current_chunk) + len(para) + 2 <= max_chars:  # +2 untuk \n\n
+        if len(current_chunk) + len(para) + 2 <= max_chars:
             if current_chunk:
                 current_chunk += "\n\n" + para
             else:
                 current_chunk = para
         else:
-            # Paragraf terlalu panjang atau chunk sudah penuh
             if current_chunk:
-                # Simpan chunk yang ada dengan overlap dari chunk sebelumnya
                 full_chunk = previous_chunk_tail + current_chunk
                 yield full_chunk.strip()
                 
-                # Simpan tail untuk overlap di chunk berikutnya
                 if len(current_chunk) > overlap:
                     previous_chunk_tail = current_chunk[-overlap:]
                 else:
                     previous_chunk_tail = current_chunk
                 current_chunk = ""
             
-            # Jika paragraf sendiri terlalu panjang, pecah berdasarkan kalimat
             if len(para) > max_chars:
                 sentences = _split_into_sentences(para)
                 sentence_chunk = ""
@@ -72,14 +64,11 @@ def create_chunks(text: str, max_chars: int = 1500, overlap: int = 300):
                                 previous_chunk_tail = sentence_chunk
                         sentence_chunk = sent
                 
-                # Sisa kalimat menjadi current_chunk berikutnya
                 if sentence_chunk:
                     current_chunk = sentence_chunk
             else:
-                # Paragraf tidak terlalu panjang, jadikan sebagai current_chunk baru
                 current_chunk = para
     
-    # Yield chunk terakhir
     if current_chunk:
         full_chunk = previous_chunk_tail + current_chunk
         yield full_chunk.strip()
@@ -97,13 +86,9 @@ def _split_into_sentences(text: str) -> list[str]:
     """
     import re
     
-    # Split berdasarkan titik, tanda tanya, atau tanda seru
-    # Pattern ini menangani kalimat yang dimulai dengan huruf kapital
     sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', text)
     
-    # Fallback: jika tidak ada sentence boundary yang jelas dan teks sangat panjang
     if len(sentences) == 1 and len(text) > 1500:
-        # Split berdasarkan kata dengan batasan panjang
         words = text.split()
         current = []
         result = []
@@ -111,7 +96,7 @@ def _split_into_sentences(text: str) -> list[str]:
         
         for word in words:
             current.append(word)
-            current_len += len(word) + 1  # +1 untuk spasi
+            current_len += len(word) + 1
             if current_len >= 1000:
                 result.append(" ".join(current))
                 current = []
@@ -122,7 +107,6 @@ def _split_into_sentences(text: str) -> list[str]:
         
         return result
     
-    # Bersihkan hasil splitting
     return [s.strip() for s in sentences if s.strip()]
 
 

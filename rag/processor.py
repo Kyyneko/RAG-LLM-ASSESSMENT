@@ -1,5 +1,3 @@
-# rag/processor.py
-
 import os
 import pymysql
 import numpy as np
@@ -51,7 +49,6 @@ def index_rag_documents(chunk_size: int = 500):
 
         print(f"Memproses dokumen: {path}")
 
-        # 1. Ekstraksi teks dari PDF
         try:
             reader = PdfReader(path)
             text = "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
@@ -63,16 +60,13 @@ def index_rag_documents(chunk_size: int = 500):
             print(f"Tidak ada teks yang dapat diekstraksi dari {path}.")
             continue
 
-        # 2. Pemecahan teks menjadi potongan (chunks)
         chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
         if not chunks:
             print(f"Tidak ada chunk yang terbentuk untuk {path}.")
             continue
 
-        # 3. Pembentukan embedding
         embeddings = model.encode(chunks, normalize_embeddings=True)
 
-        # 4. Penyimpanan hasil ke database
         try:
             for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
                 cur.execute("""
@@ -87,7 +81,7 @@ def index_rag_documents(chunk_size: int = 500):
             """, (doc_id,))
 
             conn.commit()
-            print(f"Dokumen {os.path.basename(path)} berhasil diindeks ({len(chunks)} chunk).")
+            print(f"✓ Dokumen {os.path.basename(path)} berhasil diindeks ({len(chunks)} chunk).")
 
         except pymysql.Error as e:
             conn.rollback()

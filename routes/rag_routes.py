@@ -1,5 +1,3 @@
-# routes/rag_routes.py
-
 import logging
 import traceback
 import sys
@@ -18,7 +16,6 @@ rag_bp = Blueprint("rag_bp", __name__)
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "txt"}
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -27,34 +24,34 @@ logger = logging.getLogger(__name__)
 
 
 def allowed_file(filename: str) -> bool:
-    """Check if file extension is allowed."""
+    """Mengecek apakah ekstensi file diperbolehkan."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @rag_bp.route("/generate", methods=["POST"])
 def generate_assessment():
     """
-    Generate assessment task with RAG and LLM.
+    Generate assessment task dengan RAG dan LLM.
 
-    Supports three modes:
-    1. Session-based mode (backward compatible):
-       - Requires: session_id, assistant_id
-       - Optional: notes
+    Mendukung tiga mode:
+    1. Mode berbasis session (backward compatible):
+       - Dibutuhkan: session_id, assistant_id
+       - Opsional: notes
 
-    2. Direct parameters mode (new UI support):
-       - Requires: subject_id, module_id, tingkat_kesulitan, assistant_id
-       - Optional: session_id (if provided, links to existing session)
+    2. Mode parameter langsung (dukungan UI baru):
+       - Dibutuhkan: subject_id, module_id, tingkat_kesulitan, assistant_id
+       - Opsional: session_id (jika diberikan, menghubungkan ke session yang ada)
 
-    3. Preview mode:
+    3. Mode preview:
        - Parameter: mode: "preview"
        - Tidak menyimpan ke database, hanya return hasil generate
 
-    Business Logic (normal mode):
+    Business Logic (mode normal):
     - Jika sudah ada assessment untuk session ini dengan status 'applied': REJECT (409 Conflict)
     - Jika sudah ada assessment dengan status 'draft'/'none'/'generating': REPLACE (200 OK)
     - Jika belum ada assessment: CREATE NEW (201 Created)
 
-    Preview Mode:
+    Mode Preview:
     - Generate dan return hasil langsung tanpa save ke DB
     - FE bisa preview dan approve dengan endpoint terpisah
     """
@@ -63,37 +60,32 @@ def generate_assessment():
     cursor = None
     
     try:
-        # 1. Parse and validate request
         data = request.get_json()
 
-        # Check mode
-        mode = data.get("mode", "normal")  # "normal" or "preview"
+        mode = data.get("mode", "normal")
         is_preview_mode = mode == "preview"
 
-        # Check which mode: session-based or direct parameters
         is_direct_mode = "subject_id" in data or "module_id" in data
         
         if is_direct_mode:
-            # NEW MODE: Direct parameters from UI
             subject_id = data.get("subject_id")
             module_id = data.get("module_id")
             tingkat_kesulitan = data.get("tingkat_kesulitan", "Sedang")
             assistant_id = data.get("assistant_id")
-            session_id = data.get("session_id")  # Optional
+            session_id = data.get("session_id")
             notes = data.get("notes", "").strip()
             
             if not all([subject_id, module_id, assistant_id]):
-                logger.warning("Missing required fields for direct mode")
+                logger.warning("Field wajib tidak lengkap untuk mode langsung")
                 return jsonify({
                     "error": "subject_id, module_id, dan assistant_id wajib diisi."
                 }), 400
 
-            logger.info(f"Direct mode - subject_id={subject_id}, module_id={module_id}, kesulitan={tingkat_kesulitan}")
+            logger.info(f"Mode langsung - subject_id={subject_id}, module_id={module_id}, kesulitan={tingkat_kesulitan}")
 
             conn = get_connection()
             cursor = conn.cursor()
 
-            # Validate assistant_id exists in user table
             cursor.execute("""
                 SELECT id, username, id_role
                 FROM user
@@ -108,14 +100,13 @@ def generate_assessment():
                 }), 404
 
             if assistant_user['id_role'] != 3:
-                logger.warning(f"User ID {assistant_id} is not an assistant (role: {assistant_user['id_role']})")
+                logger.warning(f"User ID {assistant_id} bukan assistant (role: {assistant_user['id_role']})")
                 return jsonify({
                     "error": f"User dengan ID {assistant_id} bukan assistant.",
                     "hint": "Gunakan user dengan role assistant"
                 }), 400
             
-            # Get subject info by ID
-            print(f"\n[Step 1] Mencari subject dengan ID: {subject_id}")
+            print(f"\n[Langkah 1] Mencari subject dengan ID: {subject_id}")
             cursor.execute("""
                 SELECT id, name, description
                 FROM subject
@@ -131,10 +122,9 @@ def generate_assessment():
                 }), 404
 
             subject_name = subject_row["name"]
-            print(f"SUCCESS: Found subject: {subject_name} (ID: {subject_id})")
+            print(f"✓ Subject ditemukan: {subject_name} (ID: {subject_id})")
             
-            # Get module info by ID
-            print(f"[Step 2] Mencari module dengan ID: {module_id}")
+            print(f"[Langkah 2] Mencari module dengan ID: {module_id}")
             cursor.execute("""
                 SELECT id, title, file_path, file_name
                 FROM module
@@ -150,11 +140,10 @@ def generate_assessment():
                 }), 404
 
             module_title = module_row["title"]
-            print(f"SUCCESS: Found module: {module_title} (ID: {module_id})")
+            print(f"✓ Module ditemukan: {module_title} (ID: {module_id})")
             
-            # Get session info
             if session_id:
-                print(f"[Step 3] Mengambil data session: {session_id}")
+                print(f"[Langkah 3] Mengambil data session: {session_id}")
                 cursor.execute("""
                     SELECT s.id, s.session_name, c.class_name
                     FROM session s
@@ -166,38 +155,35 @@ def generate_assessment():
                 if session_row:
                     topic = session_row["session_name"] or module_title
                     class_name = session_row["class_name"] or "Unknown"
-                    print(f"SUCCESS: Session found: {topic} ({class_name})")
+                    print(f"✓ Session ditemukan: {topic} ({class_name})")
                 else:
-                    # Use module title as topic
                     topic = module_title
                     class_name = "Generated"
-                    print(f"Session not found, using module title as topic: {topic}")
+                    print(f"Session tidak ditemukan, menggunakan judul modul sebagai topik: {topic}")
             else:
                 topic = module_title
                 class_name = "Generated"
-                print(f"No session_id, using module title as topic: {topic}")
+                print(f"Tidak ada session_id, menggunakan judul modul sebagai topik: {topic}")
             
         else:
-            # LEGACY MODE: Session-based (backward compatible)
             session_id = data.get("session_id")
             assistant_id = data.get("assistant_id")
             notes = data.get("notes", "").strip()
-            tingkat_kesulitan = "Sedang"  # Default for legacy mode
+            tingkat_kesulitan = "Sedang"
             
             if not session_id or not assistant_id:
-                logger.warning("Missing session_id or assistant_id")
+                logger.warning("session_id atau assistant_id tidak ada")
                 return jsonify({"error": "session_id dan assistant_id wajib diisi."}), 400
             
-            logger.info(f"Legacy mode - session_id={session_id}, assistant_id={assistant_id}")
+            logger.info(f"Mode legacy - session_id={session_id}, assistant_id={assistant_id}")
             
             if notes:
-                logger.info(f"Custom notes provided: {notes[:100]}...")
+                logger.info(f"Catatan khusus diberikan: {notes[:100]}...")
             
-            # Get session info
             conn = get_connection()
             cursor = conn.cursor()
             
-            print("\n[Step 1] Mengambil data session...")
+            print("\n[Langkah 1] Mengambil data session...")
             cursor.execute("""
                 SELECT
                     s.id, s.session_name, s.id_class,
@@ -223,10 +209,9 @@ def generate_assessment():
             subject_name = session["subject_name"]
             subject_id = session["subject_id"]
             
-            print(f"SUCCESS: Session: {subject_name} ({class_name}) - Topik: {topic}")
+            print(f"✓ Session: {subject_name} ({class_name}) - Topik: {topic}")
         
-        # 3. Check existing assessment for THIS SESSION (BUSINESS LOGIC)
-        print("[Step 4] Memeriksa existing assessment...")
+        print("[Langkah 4] Memeriksa assessment yang sudah ada...")
         if session_id:
             cursor.execute("""
                 SELECT id, title, generation_status, created_at
@@ -244,16 +229,15 @@ def generate_assessment():
         
         if existing_task:
             existing_status = existing_task["generation_status"]
-            existing_title = existing_task["title"] or "(no title)"
+            existing_title = existing_task["title"] or "(tanpa judul)"
             existing_id = existing_task["id"]
             
-            print(f"WARNING: Ditemukan assessment existing:")
+            print(f"⚠️ Ditemukan assessment yang sudah ada:")
             print(f"   - ID: {existing_id}")
-            print(f"   - Title: {existing_title}")
+            print(f"   - Judul: {existing_title}")
             print(f"   - Status: {existing_status}")
             
             if existing_status == "applied":
-                # REJECT: Cannot regenerate if already applied
                 elapsed = time.time() - start_time
                 return jsonify({
                     "error": "Assessment untuk session ini sudah di-apply.",
@@ -263,25 +247,15 @@ def generate_assessment():
                     "status": existing_status,
                     "hint": "Hapus atau ubah status assessment existing terlebih dahulu.",
                     "processing_time_seconds": round(elapsed, 2)
-                }), 409  # HTTP 409 Conflict
-            
-            # NOTE: Always create new assessment task - no replace mode
-            # elif existing_status in ["draft", "none", "generating"]:
-            #     # REPLACE: Update existing draft
-            #     replace_task_id = existing_id
-            #     action_type = "replace"
-            #     print(f"SUCCESS: Will REPLACE existing draft (ID: {replace_task_id})")
+                }), 409
 
-            # Selalu buat baru, tidak peduli status existing
-            print(f"SUCCESS: Will CREATE NEW assessment (ignoring existing)")
+            print(f"✓ Akan MEMBUAT assessment BARU (mengabaikan yang sudah ada)")
             action_type = "create"
         else:
-            print("SUCCESS: Tidak ada assessment existing, akan membuat baru")
+            print("✓ Tidak ada assessment yang sudah ada, akan membuat baru")
         
-        # 4. Get module files
-        print("[Step 5] Mengambil file modul...")
+        print("[Langkah 5] Mengambil file modul...")
         if is_direct_mode and module_id:
-            # Get specific module file by ID
             cursor.execute("""
                 SELECT file_path, title, file_name
                 FROM module
@@ -289,7 +263,6 @@ def generate_assessment():
             """, (module_id,))
             modules = cursor.fetchall()
         elif session_id:
-            # Get all modules (schema doesn't have session_id in module)
             cursor.execute("""
                 SELECT file_path, title, file_name
                 FROM module
@@ -298,7 +271,6 @@ def generate_assessment():
             """)
             modules = cursor.fetchall()
         else:
-            # If no session, get recent modules
             cursor.execute("""
                 SELECT file_path, title, file_name
                 FROM module
@@ -316,17 +288,15 @@ def generate_assessment():
             }), 404
         
         file_paths = [m["file_path"] for m in modules]
-        print(f"SUCCESS: {len(modules)} modul ditemukan")
+        print(f"✓ {len(modules)} modul ditemukan")
         
-        # 5. Run RAG pipeline
-        print("[Step 6] Menjalankan pipeline indexing...")
+        print("[Langkah 6] Menjalankan pipeline indexing...")
         embedder = Embedder()
         vectorstore = process_files(file_paths, embedder)
         
-        # 6. Retrieve context with reranking
-        print("[Step 7] Melakukan retrieval konteks...")
+        print("[Langkah 7] Melakukan retrieval konteks...")
         query = f"Materi praktikum tentang {topic} dalam mata kuliah {subject_name}"
-        logger.info(f"Retrieving context for: {query}")
+        logger.info(f"Mencari konteks untuk: {query}")
         
         context_snippets = retrieve_context_with_reranking(
             vectorstore=vectorstore,
@@ -338,16 +308,15 @@ def generate_assessment():
         
         if not context_snippets:
             elapsed = time.time() - start_time
-            logger.warning("No relevant context found")
+            logger.warning("Tidak ditemukan konteks yang relevan")
             return jsonify({
                 "error": "Tidak ada konteks relevan ditemukan.",
                 "hint": "Pastikan modul berisi materi tentang topik ini.",
                 "processing_time_seconds": round(elapsed, 2)
             }), 404
         
-        logger.info(f"Retrieved {len(context_snippets)} context snippets")
+        logger.info(f"Ditemukan {len(context_snippets)} snippets konteks")
         
-        # 7. Build custom notes with parameters
         custom_notes_parts = []
         if notes:
             custom_notes_parts.append(notes)
@@ -356,107 +325,64 @@ def generate_assessment():
         
         combined_notes = "\n".join(custom_notes_parts)
 
-        # 8. Generate assessment (with enhanced notes)
-        print(f"[Step 8] Generating assessment ({'preview' if is_preview_mode else action_type})...")
+        print(f"[Langkah 8] Menghasilkan assessment ({'preview' if is_preview_mode else action_type})...")
         print(f"  - Tingkat kesulitan: {tingkat_kesulitan}")
         if notes:
-            print(f"  - Custom notes: {notes}")
+            print(f"  - Catatan khusus: {notes}")
 
-        # NOTE: Preview mode di-comment untuk langsung generate assessment task
-        # if is_preview_mode:
-        #     # PREVIEW MODE: Generate tanpa save ke DB
-        #     print("  - MODE: Preview (tidak menyimpan ke database)")
-        #
-        #     preview_result = preview_rag_generated_assessment(
-        #         subject_id=subject_id,
-        #         session_id=session_id if session_id else 0,
-        #         topic=topic,
-        #         class_name=class_name,
-        #         subject_name=subject_name,
-        #         assistant_id=assistant_id,
-        #         context_snippets=context_snippets,
-        #         custom_notes=combined_notes,
-        #         generated_by=assistant_id
-        #     )
-        #
-        #     elapsed_time = time.time() - start_time
-        #     logger.info(f"SUCCESS: Assessment preview generated: time={elapsed_time:.2f}s")
-        #
-        #     # Preview response
-        #     response_data = {
-        #         "status": "success",
-        #         "mode": "preview",
-        #         "message": "Assessment preview berhasil dibuat.",
-        #         "preview": preview_result["preview"],
-        #         "parameters": {
-        #             "subject_id": subject_id,
-        #             "subject_name": subject_name,
-        #             "module_title": topic,
-        #             "tingkat_kesulitan": tingkat_kesulitan
-        #         },
-        #         "processing_time_seconds": round(elapsed_time, 2)
-        #     }
-        #
-        #     return jsonify(response_data), 200
-        #
-        # else:
-            # NORMAL MODE: Generate dan save ke DB
-            task_id = create_rag_generated_task(
-                subject_id=subject_id,
-                session_id=session_id if session_id else 0,  # Use 0 if no session
-                assistant_id=assistant_id,
-                subject_name=subject_name,
-                topic=topic,
-                class_name=class_name,
-                context_snippets=context_snippets,
-                existing_task_id=replace_task_id,
-                custom_notes=combined_notes,
-                generated_by=assistant_id  # Track which assistant generated this
-            )
+        task_id = create_rag_generated_task(
+            subject_id=subject_id,
+            session_id=session_id if session_id else 0,
+            assistant_id=assistant_id,
+            subject_name=subject_name,
+            topic=topic,
+            class_name=class_name,
+            context_snippets=context_snippets,
+            existing_task_id=replace_task_id,
+            custom_notes=combined_notes,
+            generated_by=assistant_id
+        )
 
-            elapsed_time = time.time() - start_time
-            logger.info(f"SUCCESS: Assessment {action_type}d: task_id={task_id}, time={elapsed_time:.2f}s")
+        elapsed_time = time.time() - start_time
+        logger.info(f"✓ Assessment {action_type}: task_id={task_id}, waktu={elapsed_time:.2f}s")
 
-            # Success response
-            response_data = {
-                "status": "success",
-                "mode": "normal",
-                "message": f"Assessment berhasil {'diperbarui' if action_type == 'replace' else 'dibuat'}.",
-                "action": action_type,
-                "task_id": task_id,
-                "parameters": {
-                    "subject_id": subject_id,
-                    "subject_name": subject_name,
-                    "module_title": topic,
-                    "tingkat_kesulitan": tingkat_kesulitan
-                },
-                "processing_time_seconds": round(elapsed_time, 2)
-            }
+        response_data = {
+            "status": "success",
+            "mode": "normal",
+            "message": f"Assessment berhasil {'diperbarui' if action_type == 'replace' else 'dibuat'}.",
+            "action": action_type,
+            "task_id": task_id,
+            "parameters": {
+                "subject_id": subject_id,
+                "subject_name": subject_name,
+                "module_title": topic,
+                "tingkat_kesulitan": tingkat_kesulitan
+            },
+            "processing_time_seconds": round(elapsed_time, 2)
+        }
 
-            if action_type == "replace":
-                response_data["replaced_task_id"] = replace_task_id
+        if action_type == "replace":
+            response_data["replaced_task_id"] = replace_task_id
 
-            status_code = 200 if action_type == "replace" else 201
-            return jsonify(response_data), status_code
+        status_code = 200 if action_type == "replace" else 201
+        return jsonify(response_data), status_code
         
     except Exception as e:
         elapsed_time = time.time() - start_time
         
-        # COMPREHENSIVE ERROR LOGGING
         exc_type, exc_value, exc_traceback = sys.exc_info()
         
         print(f"\n{'='*60}")
-        print(f"[ERROR] Exception occurred")
-        print(f"Type: {exc_type.__name__ if exc_type else 'Unknown'}")
-        print(f"Value: {exc_value if exc_value else 'Unknown'}")
-        print(f"\nFull Traceback:")
+        print(f"[ERROR] Terjadi exception")
+        print(f"Tipe: {exc_type.__name__ if exc_type else 'Unknown'}")
+        print(f"Nilai: {exc_value if exc_value else 'Unknown'}")
+        print(f"\nTraceback Lengkap:")
         traceback.print_exception(exc_type, exc_value, exc_traceback)
         print(f"{'='*60}\n")
         
-        logger.error(f"Error generating assessment: {exc_value}", exc_info=True)
+        logger.error(f"Error menghasilkan assessment: {exc_value}", exc_info=True)
         
-        # Safe error message extraction
-        error_message = str(exc_value) if exc_value else "Unknown error occurred"
+        error_message = str(exc_value) if exc_value else "Terjadi kesalahan yang tidak diketahui"
         error_type = exc_type.__name__ if exc_type else "Exception"
         
         return jsonify({
@@ -468,7 +394,6 @@ def generate_assessment():
         }), 500
         
     finally:
-        # Always close database connections
         if cursor:
             try:
                 cursor.close()
@@ -483,7 +408,7 @@ def generate_assessment():
 
 @rag_bp.route("/upload-module", methods=["POST"])
 def upload_module():
-    """Upload new module file and save metadata to database."""
+    """Upload file modul baru dan simpan metadata ke database."""
     if "file" not in request.files:
         return jsonify({"error": "Tidak ada file yang diunggah"}), 400
     
@@ -510,7 +435,6 @@ def upload_module():
         conn = get_connection()
         cur = conn.cursor()
         
-        # Validate session exists
         cur.execute("SELECT subject_id FROM session WHERE id = %s", (session_id,))
         session = cur.fetchone()
         
@@ -519,27 +443,22 @@ def upload_module():
         
         subject_id = session["subject_id"]
         
-        # Generate safe filename
         filename = secure_filename(file.filename)
         timestamp = int(time.time())
         safe_filename = f"{session_id}_{timestamp}_{filename}"
         
-        # Prepare upload folder
         upload_folder = current_app.config.get("UPLOAD_FOLDER", "upload/")
         os.makedirs(upload_folder, exist_ok=True)
         
-        # Save file
         file_path_string = os.path.join(upload_folder, safe_filename)
         file.save(file_path_string)
-        print(f"SUCCESS: File saved: {file_path_string}")
+        print(f"✓ File tersimpan: {file_path_string}")
         
-        # Calculate checksum
         with open(file_path_string, "rb") as f:
             checksum = hashlib.sha256(f.read()).hexdigest()
         
         file_type = filename.rsplit(".", 1)[1].lower() if "." in filename else "unknown"
         
-        # Insert to module table
         cur.execute("""
             INSERT INTO module (session_id, subject_id, title, file_path, uploaded_by)
             VALUES (%s, %s, %s, %s, %s)
@@ -547,7 +466,6 @@ def upload_module():
         
         module_id = cur.lastrowid
         
-        # Insert to rag_source_documents table
         cur.execute("""
             INSERT INTO rag_source_documents 
             (subject_id, session_id, file_name, file_type, file_path, checksum, uploaded_by, is_indexed)
@@ -556,7 +474,7 @@ def upload_module():
         
         conn.commit()
         
-        print(f"SUCCESS: Module uploaded: {filename} (ID: {module_id})")
+        print(f"✓ Modul terunggah: {filename} (ID: {module_id})")
         
         return jsonify({
             "status": "success",
@@ -568,7 +486,7 @@ def upload_module():
         }), 201
         
     except Exception as e:
-        print(f"ERROR: Error uploading module: {e}")
+        print(f"✗ Error mengunggah modul: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
         
@@ -587,7 +505,7 @@ def upload_module():
 
 @rag_bp.route("/register-module", methods=["POST"])
 def register_module():
-    """Register existing module file without uploading (metadata only)."""
+    """Mendaftarkan file modul yang sudah ada tanpa upload (metadata saja)."""
     try:
         data = request.get_json()
         
@@ -596,7 +514,7 @@ def register_module():
         
         if missing:
             return jsonify({
-                "error": f"Missing required fields: {', '.join(missing)}"
+                "error": f"Field wajib tidak ada: {', '.join(missing)}"
             }), 400
         
         session_id = data["session_id"]
@@ -604,7 +522,6 @@ def register_module():
         file_path = data["file_path"]
         assistant_id = data["assistant_id"]
         
-        # Validate file exists
         if not os.path.exists(file_path):
             return jsonify({
                 "error": f"File tidak ditemukan: {file_path}"
@@ -613,7 +530,6 @@ def register_module():
         conn = get_connection()
         cur = conn.cursor()
         
-        # Validate session
         cur.execute("SELECT subject_id FROM session WHERE id = %s", (session_id,))
         session = cur.fetchone()
         
@@ -624,15 +540,12 @@ def register_module():
         
         subject_id = session["subject_id"]
         
-        # Extract file info
         filename = os.path.basename(file_path)
         file_type = filename.rsplit(".", 1)[1].lower() if "." in filename else "unknown"
         
-        # Calculate checksum
         with open(file_path, "rb") as f:
             checksum = hashlib.sha256(f.read()).hexdigest()
         
-        # Insert to module table
         cur.execute("""
             INSERT INTO module (session_id, subject_id, title, file_path, uploaded_by)
             VALUES (%s, %s, %s, %s, %s)
@@ -640,7 +553,6 @@ def register_module():
         
         module_id = cur.lastrowid
         
-        # Insert to rag_source_documents
         cur.execute("""
             INSERT INTO rag_source_documents 
             (subject_id, session_id, file_name, file_type, file_path, checksum, uploaded_by, is_indexed)
@@ -651,7 +563,7 @@ def register_module():
         cur.close()
         conn.close()
         
-        print(f"SUCCESS: Module registered: {filename} (ID: {module_id})")
+        print(f"✓ Modul terdaftar: {filename} (ID: {module_id})")
         
         return jsonify({
             "status": "success",
@@ -663,14 +575,14 @@ def register_module():
         }), 201
         
     except Exception as e:
-        print(f"ERROR: Error registering module: {e}")
+        print(f"✗ Error mendaftarkan modul: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
 @rag_bp.route("/task/<int:task_id>/status", methods=["PATCH"])
 def update_task_status(task_id: int):
-    """Update assessment task status (none/generating/draft/applied)."""
+    """Update status assessment task (none/generating/draft/applied)."""
     data = request.get_json() or {}
     new_status = data.get("status")
     assistant_id = data.get("assistant_id")
@@ -709,7 +621,7 @@ def update_task_status(task_id: int):
         
         conn.commit()
         
-        print(f"SUCCESS: Task {task_id} updated: {old_status} → {new_status}")
+        print(f"✓ Task {task_id} diperbarui: {old_status} → {new_status}")
         
         return jsonify({
             "status": "success",
@@ -720,7 +632,7 @@ def update_task_status(task_id: int):
         }), 200
         
     except Exception as e:
-        print(f"ERROR: Error updating status: {e}")
+        print(f"✗ Error memperbarui status: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
         
@@ -739,7 +651,7 @@ def update_task_status(task_id: int):
 
 @rag_bp.route("/subjects", methods=["GET"])
 def get_subjects():
-    """Get all subjects for dropdown/selection."""
+    """Mengambil semua subject untuk dropdown/seleksi."""
     conn = None
 
     try:
@@ -760,7 +672,7 @@ def get_subjects():
         }), 200
 
     except Exception as e:
-        print(f"Error getting subjects: {e}")
+        print(f"Error mengambil subjects: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
 
@@ -774,13 +686,12 @@ def get_subjects():
 
 @rag_bp.route("/subjects/<int:subject_id>/modules", methods=["GET"])
 def get_modules_by_subject(subject_id: int):
-    """Get all modules for a specific subject."""
+    """Mengambil semua module untuk subject tertentu."""
     conn = None
 
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            # Schema doesn't have subject_id in module, get all modules
             cur.execute("""
                 SELECT id, title, file_name, uploaded_at
                 FROM module
@@ -796,7 +707,7 @@ def get_modules_by_subject(subject_id: int):
         }), 200
 
     except Exception as e:
-        print(f"Error getting modules: {e}")
+        print(f"Error mengambil modules: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
 
@@ -811,14 +722,14 @@ def get_modules_by_subject(subject_id: int):
 @rag_bp.route("/save-assessment", methods=["POST"])
 def save_assessment():
     """
-    Save assessment yang sudah di-approve dari preview mode.
+    Menyimpan assessment yang sudah di-approve dari mode preview.
 
     Request Body:
     {
         "subject_id": 1,
         "session_id": 1,
         "assistant_id": 1,
-        "title": "Judul Assessment", // Optional
+        "title": "Judul Assessment",
         "assessment_data": {
             "sections": {
                 "soal": "konten soal...",
@@ -835,13 +746,12 @@ def save_assessment():
     try:
         data = request.get_json()
 
-        # Validate required fields
         required_fields = ["subject_id", "assistant_id", "assessment_data"]
         missing = [f for f in required_fields if f not in data]
 
         if missing:
             return jsonify({
-                "error": f"Missing required fields: {', '.join(missing)}"
+                "error": f"Field wajib tidak ada: {', '.join(missing)}"
             }), 400
 
         subject_id = data["subject_id"]
@@ -850,7 +760,6 @@ def save_assessment():
         title = data.get("title")
         assessment_data = data["assessment_data"]
 
-        # Save to database
         task_id = save_approved_assessment(
             subject_id=subject_id,
             session_id=session_id,
@@ -868,20 +777,19 @@ def save_assessment():
         }), 201
 
     except Exception as e:
-        print(f"ERROR: Error saving assessment: {e}")
+        print(f"✗ Error menyimpan assessment: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
 @rag_bp.route("/generation-history/<int:subject_id>", methods=["GET"])
 def generation_history(subject_id: int):
-    """Get assessment generation history for a specific subject."""
+    """Mengambil riwayat generasi assessment untuk subject tertentu."""
     conn = None
 
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            # Schema uses id_subject instead of subject_id
             cur.execute("""
                 SELECT id, name as title, description, id_subject, created_at, updated_at
                 FROM assessment_task
@@ -898,7 +806,7 @@ def generation_history(subject_id: int):
         }), 200
 
     except Exception as e:
-        print(f"Error getting history: {e}")
+        print(f"Error mengambil riwayat: {e}")
         traceback.print_exc()
         return jsonify({"status": "error", "error": str(e)}), 500
 

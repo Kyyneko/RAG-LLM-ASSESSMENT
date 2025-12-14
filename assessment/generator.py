@@ -1,5 +1,3 @@
-# assessment/generator.py
-
 import json
 from datetime import datetime
 from db.connection import get_connection
@@ -69,17 +67,16 @@ def preview_rag_generated_assessment(
         dict: Assessment data yang bisa ditampilkan di FE
     """
     print("=" * 60)
-    print(f"GENERATING ASSESSMENT PREVIEW")
+    print(f"MENGHASILKAN PREVIEW ASSESSMENT")
     print("=" * 60)
     print(f"Subject: {subject_name} (ID: {subject_id})")
     print(f"Session: {topic} (ID: {session_id})")
-    print(f"Class: {class_name}")
+    print(f"Kelas: {class_name}")
     print(f"Context chunks: {len(context_snippets)}")
     if custom_notes:
-        print(f"Custom notes: {custom_notes}")
+        print(f"Catatan khusus: {custom_notes}")
     print("=" * 60)
 
-    # 1. Generate dengan LLM
     print("\nMemanggil LLM untuk menghasilkan assessment...")
     raw_output = generate_assessment_description(
         subject_name=subject_name,
@@ -87,20 +84,18 @@ def preview_rag_generated_assessment(
         class_name=class_name,
         context_snippets=context_snippets,
         custom_notes=custom_notes,
-        assessment_task_id=None,  # Preview mode - no task_id yet
+        assessment_task_id=None,
         generation_type="preview",
-        generated_by=generated_by  # Track which assistant generated this preview
+        generated_by=generated_by
     )
 
     if not raw_output or not raw_output.strip():
         raise Exception("LLM tidak mengembalikan output")
 
-    print(f"SUCCESS: LLM generation complete ({len(raw_output)} characters)")
+    print(f"✓ LLM generation selesai ({len(raw_output)} karakter)")
 
-    # 2. Parse response untuk memisahkan sections
     sections = parse_assessment_output(raw_output)
 
-    # 3. Generate metadata
     preview_metadata = {
         "subject_id": subject_id,
         "session_id": session_id,
@@ -114,7 +109,6 @@ def preview_rag_generated_assessment(
         "custom_notes": custom_notes
     }
 
-    # 4. Return preview data
     return {
         "status": "success",
         "preview": {
@@ -141,14 +135,12 @@ def parse_assessment_output(raw_output: str) -> dict:
         "notes": ""
     }
 
-    # Parse sections berdasarkan tags
     current_section = None
     lines = raw_output.split('\n')
 
     for line in lines:
         line = line.strip()
 
-        # Detect section headers
         if line.startswith('#SOAL'):
             current_section = 'soal'
             sections[current_section] = line.replace('#SOAL', '').strip()
@@ -165,10 +157,8 @@ def parse_assessment_output(raw_output: str) -> dict:
             current_section = 'notes'
             sections[current_section] = line.replace('#NOTES', '').strip()
         elif current_section and line:
-            # Append content to current section
             sections[current_section] += '\n' + line
 
-    # Clean up sections
     for key in sections:
         sections[key] = sections[key].strip()
 
@@ -208,16 +198,14 @@ def save_approved_assessment(
         int: task_id yang tersimpan
     """
     print("=" * 60)
-    print(f"SAVING APPROVED ASSESSMENT")
+    print(f"MENYIMPAN ASSESSMENT YANG DISETUJUI")
     print("=" * 60)
 
     sections = assessment_data.get('sections', {})
     metadata = assessment_data.get('metadata', {})
 
-    # Reconstruct full output
     raw_output = reconstruct_full_output(sections)
 
-    # Create database record
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -227,52 +215,26 @@ def save_approved_assessment(
                     due_date, created_by, is_active, created_at
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                title or f"Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",  # name
-                title,  # title
-                raw_output,  # description
-                subject_id,  # id_subject
-                1,  # id_score_component (default)
-                None,  # due_date
-                assistant_id,  # created_by
-                1,  # is_active
-                datetime.now()  # created_at
+                title or f"Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                title,
+                raw_output,
+                subject_id,
+                1,
+                None,
+                assistant_id,
+                1,
+                datetime.now()
             ))
 
             task_id = cur.lastrowid
 
-            # Log to ai_generation_log
-            cur.execute("""
-                INSERT INTO ai_generation_log (
-                    assessment_task_id, generation_type, prompt_parameters,
-                    generated_content, source_materials, model_used,
-                    generation_status, generated_by
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                task_id,
-                'description',
-                json.dumps({
-                    "subject": metadata.get('subject_name'),
-                    "topic": metadata.get('topic'),
-                    "class": metadata.get('class_name'),
-                    "action": "approved_and_saved"
-                }),
-                raw_output,
-                json.dumps({
-                    "context_count": metadata.get('context_count', 0),
-                    "preview_mode": True
-                }),
-                metadata.get('model', 'google/gemini-2.0-flash-exp:free'),
-                'success',
-                assistant_id
-            ))
-
             conn.commit()
-            print(f"SUCCESS: Assessment saved with task_id: {task_id}")
+            print(f"✓ Assessment tersimpan dengan task_id: {task_id}")
             return task_id
 
     except Exception as e:
         conn.rollback()
-        print(f"ERROR: Database error: {str(e)}")
+        print(f"✗ Kesalahan database: {str(e)}")
         raise e
 
     finally:
@@ -325,19 +287,18 @@ def create_rag_generated_task(
     is_replace_mode = existing_task_id is not None
     
     print("=" * 60)
-    print(f"{'REPLACING DRAFT' if is_replace_mode else 'CREATING NEW'} ASSESSMENT TASK")
+    print(f"{'MENGGANTI DRAFT' if is_replace_mode else 'MEMBUAT'} ASSESSMENT TASK BARU")
     print("=" * 60)
     print(f"Subject: {subject_name} (ID: {subject_id})")
     print(f"Session: {topic} (ID: {session_id})")
-    print(f"Class: {class_name}")
+    print(f"Kelas: {class_name}")
     print(f"Context chunks: {len(context_snippets)}")
     if custom_notes:
-        print(f"Custom notes: {custom_notes}")
+        print(f"Catatan khusus: {custom_notes}")
     if is_replace_mode:
-        print(f"Replace mode: updating existing task_id={existing_task_id}")
+        print(f"Mode replace: memperbarui task_id={existing_task_id}")
     print("=" * 60)
     
-    # 1. Generate dengan LLM (with custom notes)
     print("\nMemanggil LLM untuk menghasilkan teks...")
     raw_output = generate_assessment_description(
         subject_name=subject_name,
@@ -347,24 +308,22 @@ def create_rag_generated_task(
         custom_notes=custom_notes,
         assessment_task_id=existing_task_id,
         generation_type="assessment",
-        generated_by=generated_by  # Pass user ID to logging
+        generated_by=generated_by
     )
     
     if not raw_output or not raw_output.strip():
         raise Exception("LLM tidak mengembalikan output")
     
-    print(f"SUCCESS: LLM generation complete ({len(raw_output)} characters)")
+    print(f"✓ LLM generation selesai ({len(raw_output)} karakter)")
     
-    # 2. Validation - Check required tags
     required_tags = ["#SOAL", "#REQUIREMENTS", "#EXPECTED OUTPUT", "#KUNCI JAWABAN"]
     missing_tags = [tag for tag in required_tags if tag not in raw_output]
     
     if missing_tags:
-        print(f"WARNING: WARNING: Missing tags: {', '.join(missing_tags)}")
+        print(f"⚠️ Tag tidak lengkap: {', '.join(missing_tags)}")
     else:
-        print(f"SUCCESS: Semua tag lengkap")
+        print(f"✓ Semua tag lengkap")
     
-    # 3. Metadata generation
     generation_metadata = {
         "session_id": session_id,
         "topic": topic,
@@ -375,14 +334,12 @@ def create_rag_generated_task(
         "is_replacement": is_replace_mode
     }
     
-    # 4. Simpan ke database
     print("\nMenyimpan data ke database...")
     conn = get_connection()
     
     try:
         with conn.cursor() as cur:
             if is_replace_mode:
-                # Mode UPDATE
                 print(f"Memperbarui draft task_id={existing_task_id}...")
                 cur.execute("""
                     UPDATE assessment_task SET
@@ -391,16 +348,15 @@ def create_rag_generated_task(
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (
-                    raw_output,  # Full LLM output ke description
+                    raw_output,
                     due_date,
                     existing_task_id
                 ))
                 task_id = existing_task_id
-                action = "updated"
-                print(f"SUCCESS: Task {task_id} updated successfully")
+                action = "diperbarui"
+                print(f"✓ Task {task_id} berhasil diperbarui")
                 
             else:
-                # Mode INSERT
                 print("Membuat assessment baru...")
                 cur.execute("""
                     INSERT INTO assessment_task (
@@ -408,59 +364,28 @@ def create_rag_generated_task(
                         due_date, created_by, is_active, created_at
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    f"Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",  # name
-                    None,  # title (akan diisi manual)
-                    raw_output,  # description
-                    subject_id,  # id_subject
-                    1,  # id_score_component (default)
+                    f"Assessment {datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    None,
+                    raw_output,
+                    subject_id,
+                    1,
                     due_date,
                     assistant_id,
-                    1,  # is_active
-                    datetime.now()  # created_at
+                    1,
+                    datetime.now()
                 ))
                 task_id = cur.lastrowid
-                action = "created"
-                print(f"SUCCESS: Task {task_id} created successfully")
-            
-            # 5. Insert ke ai_generation_log
-            print("Mencatat ke tabel ai_generation_log...")
-            
-            # Extract text from contexts (handle dict format)
-            context_texts = [extract_text_from_context(c) for c in context_snippets]
-            
-            cur.execute("""
-                INSERT INTO ai_generation_log (
-                    assessment_task_id, generation_type, prompt_parameters,
-                    generated_content, source_materials, model_used,
-                    generation_status, generated_by
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                task_id,
-                'description',
-                json.dumps({
-                    "subject": subject_name,
-                    "topic": topic,
-                    "class": class_name,
-                    "action": action
-                }),
-                raw_output,
-                json.dumps({
-                    "context_count": len(context_texts),
-                    "contexts_preview": [text[:120] for text in context_texts[:3]]
-                }),
-                "google/gemini-2.0-flash-exp:free",
-                'success',
-                assistant_id
-            ))
+                action = "dibuat"
+                print(f"✓ Task {task_id} berhasil dibuat")
             
             conn.commit()
-            print(f"SUCCESS: Assessment {action} dan log berhasil disimpan")
+            print(f"✓ Assessment berhasil {action} dan disimpan")
             
             return task_id
             
     except Exception as e:
         conn.rollback()
-        print(f"ERROR: Database error: {str(e)}")
+        print(f"✗ Kesalahan database: {str(e)}")
         raise e
         
     finally:

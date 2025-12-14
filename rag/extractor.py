@@ -1,4 +1,3 @@
-# rag/extractor.py
 import os
 from pypdf import PdfReader
 from docx import Document

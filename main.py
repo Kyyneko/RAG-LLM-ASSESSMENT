@@ -1,4 +1,3 @@
-# main.py
 from flask import Flask, jsonify
 from routes.rag_routes import rag_bp
 
@@ -10,20 +9,11 @@ def create_app() -> Flask:
     """
     app = Flask(__name__)
 
-    # -------------------------------------------------------------
-    # Konfigurasi aplikasi
-    # -------------------------------------------------------------
-    app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # Maksimal 50 MB per upload
+    app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
     app.config["UPLOAD_FOLDER"] = "upload/"
 
-    # -------------------------------------------------------------
-    # Registrasi Blueprint
-    # -------------------------------------------------------------
     app.register_blueprint(rag_bp, url_prefix="/api/rag")
 
-    # -------------------------------------------------------------
-    # Route utama (health check)
-    # -------------------------------------------------------------
     @app.route("/")
     def home():
         """Endpoint utama untuk memverifikasi status API."""
@@ -39,9 +29,6 @@ def create_app() -> Flask:
             }
         })
 
-    # -------------------------------------------------------------
-    # Penanganan error global
-    # -------------------------------------------------------------
     @app.errorhandler(413)
     def too_large(e):
         """Menangani error jika file yang diunggah melebihi batas maksimum."""
@@ -52,9 +39,6 @@ def create_app() -> Flask:
     return app
 
 
-# -------------------------------------------------------------
-# Entry point aplikasi
-# -------------------------------------------------------------
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5002)

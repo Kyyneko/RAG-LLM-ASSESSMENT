@@ -1,17 +1,14 @@
-# rag/retriever.py
-
 import numpy as np
 import os
 from typing import Optional
 
-# Import CrossEncoder untuk reranking
 try:
     from sentence_transformers import CrossEncoder
     CROSS_ENCODER_AVAILABLE = True
-    print("SUCCESS: CrossEncoder imported successfully")
+    print("✓ CrossEncoder berhasil diimpor")
 except ImportError:
     CROSS_ENCODER_AVAILABLE = False
-    print("WARNING: sentence_transformers CrossEncoder not available")
+    print("⚠️ CrossEncoder tidak tersedia dari sentence_transformers")
 
 class CrossEncoderReranker:
     """CrossEncoder reranker untuk meningkatkan presisi retrieval."""
@@ -29,15 +26,15 @@ class CrossEncoderReranker:
 
         if CROSS_ENCODER_AVAILABLE:
             try:
-                print(f"Loading CrossEncoder model: {model_name}")
+                print(f"Memuat model CrossEncoder: {model_name}")
                 self.model = CrossEncoder(model_name)
                 self.is_loaded = True
-                print(f"SUCCESS: CrossEncoder model loaded successfully")
+                print(f"✓ Model CrossEncoder berhasil dimuat")
             except Exception as e:
-                print(f"WARNING: Failed to load CrossEncoder model: {e}")
-                print("Falling back to similarity-based scoring")
+                print(f"⚠️ Gagal memuat model CrossEncoder: {e}")
+                print("Fallback ke similarity-based scoring")
         else:
-            print("WARNING: CrossEncoder not available, install sentence_transformers")
+            print("⚠️ CrossEncoder tidak tersedia, install sentence_transformers")
 
     def rerank(self, query: str, documents: list[str], top_k: int = 10) -> list[dict]:
         """
@@ -52,17 +49,13 @@ class CrossEncoderReranker:
             List dict dengan format: [{"text": "...", "score": 0.85}, ...]
         """
         if not self.is_loaded or not documents:
-            # Fallback ke urutan asli dengan score 0.5
             return [{"text": doc, "score": 0.5} for doc in documents]
 
         try:
-            # Buat pasangan [query, document] untuk CrossEncoder
             pairs = [[query, doc] for doc in documents]
 
-            # Predict relevance scores
             scores = self.model.predict(pairs)
 
-            # Create ranked results
             results = []
             for doc, score in zip(documents, scores):
                 results.append({
@@ -71,21 +64,18 @@ class CrossEncoderReranker:
                     "reranked": True
                 })
 
-            # Sort by score (descending)
             results.sort(key=lambda x: x["score"], reverse=True)
 
             return results[:top_k]
 
         except Exception as e:
-            print(f"ERROR: CrossEncoder reranking failed: {e}")
-            # Fallback ke urutan asli
+            print(f"✗ CrossEncoder reranking gagal: {e}")
             return [{"text": doc, "score": 0.5} for doc in documents]
 
     def is_available(self) -> bool:
         """Check if CrossEncoder is available and loaded."""
         return self.is_loaded
 
-# Global reranker instance
 _cross_encoder_reranker: Optional[CrossEncoderReranker] = None
 
 def get_cross_encoder_reranker() -> Optional[CrossEncoderReranker]:
@@ -93,7 +83,6 @@ def get_cross_encoder_reranker() -> Optional[CrossEncoderReranker]:
     global _cross_encoder_reranker
 
     if _cross_encoder_reranker is None:
-        # Load model yang valid dan terkenal untuk reranking
         _cross_encoder_reranker = CrossEncoderReranker("cross-encoder/ms-marco-TinyBERT-L-2-v2")
 
     return _cross_encoder_reranker
@@ -112,16 +101,14 @@ def retrieve_context(vectorstore, embedder, query: str, top_k: int = 5) -> list[
         list[str]: Daftar potongan teks paling relevan.
     """
     if not query or not query.strip():
-        print("Peringatan: Query kosong, tidak ada konteks yang diambil.")
+        print("⚠️ Query kosong, tidak ada konteks yang diambil")
         return []
 
-    # Mengubah query menjadi embedding vektor
     query_vec = embedder.encode([query])
 
-    # Melakukan pencarian berbasis similaritas vektor
     results = vectorstore.search(query_vec, top_k)
 
-    print(f"Retrieved {len(results)} konteks paling relevan untuk query: {query[:100]}...")
+    print(f"Ditemukan {len(results)} konteks paling relevan untuk query: {query[:100]}...")
     return results
 
 
@@ -152,78 +139,66 @@ def retrieve_context_with_reranking(vectorstore, embedder, query: str,
             [{"text": "...", "score": 0.85, "metadata": {...}}, ...]
     """
     if not query or not query.strip():
-        print("Peringatan: Query kosong.")
+        print("⚠️ Query kosong")
         return []
 
-    # Step 1: Initial retrieval (ambil lebih banyak kandidat)
     query_vec = embedder.encode([query])
     candidates = vectorstore.search_with_scores(query_vec, initial_k)
 
     if not candidates:
-        print("Tidak ada kandidat yang ditemukan.")
+        print("Tidak ada kandidat yang ditemukan")
         return []
 
-    # Step 2: Reranking dengan CrossEncoder (auto-load jika tidak ada)
     cross_encoder_reranker = get_cross_encoder_reranker()
 
     if cross_encoder_reranker and cross_encoder_reranker.is_available():
         try:
-            print(f"SUCCESS: Using CrossEncoder reranking for {len(candidates)} candidates")
+            print(f"✓ Menggunakan CrossEncoder reranking untuk {len(candidates)} kandidat")
 
-            # Extract teks dari candidates
             candidate_texts = [cand["text"] for cand in candidates]
 
-            # Rerank menggunakan CrossEncoder
             reranked_results = cross_encoder_reranker.rerank(query, candidate_texts, len(candidates))
 
-            # Update candidates dengan rerank scores
             for i, cand in enumerate(candidates):
                 cand["original_score"] = cand["score"]
                 cand["rerank_score"] = reranked_results[i]["score"]
-                cand["score"] = cand["rerank_score"]  # Gunakan rerank score sebagai score utama
+                cand["score"] = cand["rerank_score"]
                 cand["reranked"] = True
 
-            # Sort ulang berdasarkan rerank score
             candidates.sort(key=lambda x: x["score"], reverse=True)
-            print(f"SUCCESS: CrossEncoder reranking selesai untuk {len(candidates)} kandidat")
+            print(f"✓ CrossEncoder reranking selesai untuk {len(candidates)} kandidat")
 
         except Exception as e:
-            print(f"WARNING: CrossEncoder reranking gagal, menggunakan similarity score: {e}")
+            print(f"⚠️ CrossEncoder reranking gagal, menggunakan similarity score: {e}")
             print(f"Fallback ke similarity-based retrieval")
     elif reranker is not None:
-        # Manual reranker (legacy support)
         try:
-            print(f"SUCCESS: Using manual reranker for {len(candidates)} candidates")
+            print(f"✓ Menggunakan manual reranker untuk {len(candidates)} kandidat")
 
-            # Buat pasangan [query, chunk] untuk reranking
             pairs = [[query, cand["text"]] for cand in candidates]
             rerank_scores = reranker.predict(pairs)
 
-            # Update scores dengan hasil reranking
             for i, cand in enumerate(candidates):
                 cand["rerank_score"] = float(rerank_scores[i])
                 cand["original_score"] = cand["score"]
-                cand["score"] = cand["rerank_score"]  # Gunakan rerank score sebagai score utama
+                cand["score"] = cand["rerank_score"]
                 cand["reranked"] = True
 
-            # Sort ulang berdasarkan rerank score
             candidates.sort(key=lambda x: x["score"], reverse=True)
-            print(f"SUCCESS: Manual reranking selesai: {len(candidates)} kandidat")
+            print(f"✓ Manual reranking selesai: {len(candidates)} kandidat")
         except Exception as e:
-            print(f"WARNING: Manual reranking gagal, menggunakan similarity score: {e}")
+            print(f"⚠️ Manual reranking gagal, menggunakan similarity score: {e}")
     else:
-        print("INFO: No reranker available, using similarity scores only")
+        print("ℹ️ Tidak ada reranker tersedia, menggunakan similarity scores saja")
 
-    # Step 3: Filter berdasarkan threshold
     filtered = [
         cand for cand in candidates
         if cand["score"] >= score_threshold
     ]
 
-    # Step 4: Ambil top-k
     results = filtered[:top_k]
 
-    print(f"Retrieved {len(results)} konteks (setelah reranking & filtering)")
+    print(f"Ditemukan {len(results)} konteks (setelah reranking & filtering)")
     return results
 
 

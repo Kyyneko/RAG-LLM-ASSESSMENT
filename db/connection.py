@@ -1,16 +1,11 @@
-# db/connection.py
 import os
 import pymysql
 from dotenv import load_dotenv
 
-# Load konfigurasi dari file .env
 load_dotenv()
 
 
-# ENHANCEMENT: SQL untuk membuat indexes yang optimal
 RECOMMENDED_INDEXES = """
--- Indexes untuk optimasi performa query
-
 CREATE INDEX IF NOT EXISTS idx_sessions_subject_id ON sessions(subject_id);
 CREATE INDEX IF NOT EXISTS idx_rag_docs_subject_indexed ON rag_source_documents(subject_id, is_indexed);
 CREATE INDEX IF NOT EXISTS idx_rag_docs_hash ON rag_source_documents(file_hash);
@@ -36,9 +31,9 @@ def setup_database_indexes():
         conn.commit()
         cursor.close()
         conn.close()
-        print("✓ Database indexes created successfully")
+        print("✓ Database indexes berhasil dibuat")
     except Exception as e:
-        print(f"⚠️ Error creating indexes: {str(e)}")
+        print(f"⚠️ Gagal membuat indexes: {str(e)}")
 
 
 def get_connection():
@@ -104,7 +99,7 @@ def execute_query(query, params=None, fetch_one=False, fetch_all=False):
 
     except Exception as e:
         conn.rollback()
-        print(f"Database error: {str(e)}")
+        print(f"Kesalahan database: {str(e)}")
         raise e
 
     finally:

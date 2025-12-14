@@ -1,4 +1,3 @@
-# rag/__init__.py
 from .extractor import extract_text
 from .chunker import create_chunks, create_chunks_list
 from .embedder import Embedder

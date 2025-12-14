@@ -1,5 +1,3 @@
-# rag/vectorstore.py
-
 import faiss
 import numpy as np
 import pickle
@@ -46,17 +44,15 @@ class VectorStore:
                 Format: [{"source": "file.pdf", "subject_id": 5, "chunk_index": 0}, ...]
         """
         if embeddings is None or len(embeddings) == 0:
-            print("Peringatan: Tidak ada embedding yang ditambahkan ke vector store.")
+            print("⚠️ Tidak ada embedding yang ditambahkan ke vector store")
             return
         
-        # Pastikan bentuk embedding adalah 2D
         if len(embeddings.shape) == 1:
             embeddings = embeddings.reshape(1, -1)
         
         self.index.add(embeddings)
         self.texts.extend(texts)
         
-        # Tambahkan metadata (jika tidak ada, buat dictionary kosong)
         if metadata:
             self.metadata.extend(metadata)
         else:
@@ -94,20 +90,17 @@ class VectorStore:
         if len(query_vector.shape) == 1:
             query_vector = query_vector.reshape(1, -1)
         
-        # Jika ada filter, ambil kandidat lebih banyak
         k_candidates = min(top_k * 4 if filter_fn else top_k, len(self.texts))
         
         if k_candidates == 0:
-            print("Peringatan: VectorStore masih kosong.")
+            print("⚠️ VectorStore masih kosong")
             return []
         
-        # Proses pencarian di FAISS
         distances, indices = self.index.search(query_vector, k_candidates)
         
         results = []
         for score, idx in zip(distances[0], indices[0]):
             if idx != -1 and idx < len(self.texts):
-                # Terapkan filter jika ada
                 if filter_fn is None or filter_fn(self.metadata[idx]):
                     results.append({
                         "text": self.texts[idx],
@@ -128,13 +121,10 @@ class VectorStore:
             index_path (str): Path untuk menyimpan FAISS index (e.g., "cache/subject_5.index")
             data_path (str): Path untuk menyimpan texts dan metadata (e.g., "cache/subject_5.pkl")
         """
-        # Buat direktori jika belum ada
         os.makedirs(os.path.dirname(index_path) or ".", exist_ok=True)
         
-        # Simpan FAISS index
         faiss.write_index(self.index, index_path)
         
-        # Simpan texts dan metadata
         with open(data_path, 'wb') as f:
             pickle.dump({
                 'texts': self.texts,
@@ -142,7 +132,7 @@ class VectorStore:
                 'dim': self.dim
             }, f)
         
-        print(f"SUCCESS: Vector store disimpan ke {index_path}")
+        print(f"✓ Vector store disimpan ke {index_path}")
     
     @classmethod
     def load_from_disk(cls, index_path: str, data_path: str):
@@ -156,19 +146,16 @@ class VectorStore:
         Returns:
             VectorStore: Instance yang sudah dimuat dari cache.
         """
-        # Muat data terlebih dahulu untuk mendapatkan dimensi
         with open(data_path, 'rb') as f:
             data = pickle.load(f)
         
-        # Buat instance baru
         instance = cls(data['dim'])
         
-        # Muat FAISS index
         instance.index = faiss.read_index(index_path)
         instance.texts = data['texts']
         instance.metadata = data.get('metadata', [])
         
-        print(f"SUCCESS: Vector store dimuat dari cache: {len(instance.texts)} chunks")
+        print(f"✓ Vector store dimuat dari cache: {len(instance.texts)} chunks")
         return instance
     
     def get_stats(self) -> dict:

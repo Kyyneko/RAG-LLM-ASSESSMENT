@@ -1,4 +1,3 @@
-# llm/__init__.py
 from .client import call_openrouter
 from .generator import generate_assessment_description
 

@@ -1,13 +1,8 @@
 import time
 import logging
 from .client import call_openrouter
-from db.generation_logger import generation_logger
 
 logger = logging.getLogger(__name__)
-
-# ======================================================
-# ENHANCED SUBJECT-SPECIFIC CONFIGURATIONS
-# ======================================================
 
 SUBJECT_CONFIGS = {
     "Algoritma dan Pemrograman": {
@@ -104,7 +99,6 @@ def get_subject_config(subject_name: str) -> dict:
         if key.lower() in subject_lower or subject_lower in key.lower():
             return config
 
-    # Default fallback
     return {
         "language": "Programming",
         "file_ext": "code",
@@ -152,52 +146,13 @@ def generate_assessment_description(
         str: Deskripsi soal ber-tag (#SOAL, #REQUIREMENTS, #EXPECTED OUTPUT, #KUNCI JAWABAN)
     """
 
-    # ======================================================
-    # LOG GENERATION REQUEST
-    # ======================================================
-    generation_id = None
-
-    try:
-        # Log the generation request
-        prompt_parameters = {
-            "subject_name": subject_name,
-            "topic": topic,
-            "class_name": class_name,
-            "custom_notes": custom_notes,
-            "context_count": len(context_snippets) if context_snippets else 0,
-            "module_count": len(module_names) if module_names else 0
-        }
-
-        source_materials = {
-            "modules": module_names or [],
-            "context_snippets": len(context_snippets) if context_snippets else 0,
-            "context_preview": [text[:200] + "..." if len(text) > 200 else text
-                              for text in (context_snippets[:3] if context_snippets else [])]
-        }
-
-        generation_id = generation_logger.log_generation_request(
-            assessment_task_id=assessment_task_id,
-            generation_type=generation_type,
-            prompt_parameters=prompt_parameters,
-            source_materials=source_materials,
-            model_used="OpenRouter (default)",
-            generated_by=generated_by
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to log generation request: {str(e)}")
-
-    # ======================================================
-    # VALIDATION & DEBUG LOGGING
-    # ======================================================
-    print("\n[DEBUG] Generating assessment...")
+    print("\n[DEBUG] Menghasilkan assessment...")
     print(f"[DEBUG] Subject : {subject_name}")
-    print(f"[DEBUG] Topic   : {topic}")
-    print(f"[DEBUG] Class   : {class_name}")
-    print(f"[DEBUG] Context : {len(context_snippets) if context_snippets else 0}")
-    print(f"[DEBUG] Gen ID  : {generation_id}")
+    print(f"[DEBUG] Topik   : {topic}")
+    print(f"[DEBUG] Kelas   : {class_name}")
+    print(f"[DEBUG] Konteks : {len(context_snippets) if context_snippets else 0}")
     if custom_notes:
-        print(f"[DEBUG] Custom notes: {custom_notes[:100]}...")
+        print(f"[DEBUG] Catatan khusus: {custom_notes[:100]}...")
 
     if not subject_name.strip():
         raise ValueError("subject_name tidak boleh kosong!")
@@ -206,9 +161,6 @@ def generate_assessment_description(
     if not class_name.strip():
         raise ValueError("class_name tidak boleh kosong!")
 
-    # ======================================================
-    # SUBJECT CONFIG
-    # ======================================================
     config = get_subject_config(subject_name)
     language = config["language"]
     concepts = config["concepts"]
@@ -216,12 +168,9 @@ def generate_assessment_description(
     code_style = config["code_style"]
     output_type = config["output_type"]
 
-    print(f"[DEBUG] Detected language: {language}")
-    print(f"[DEBUG] Focus area: {focus}")
+    print(f"[DEBUG] Bahasa terdeteksi: {language}")
+    print(f"[DEBUG] Area fokus: {focus}")
 
-    # ======================================================
-    # NORMALIZE CONTEXT SNIPPETS
-    # ======================================================
     normalized_snippets = []
     if context_snippets:
         for item in context_snippets:
@@ -232,11 +181,8 @@ def generate_assessment_description(
             elif isinstance(item, str) and item.strip():
                 normalized_snippets.append(item.strip())
 
-        print(f"[DEBUG] Normalized {len(normalized_snippets)} snippets")
+        print(f"[DEBUG] {len(normalized_snippets)} snippets dinormalisasi")
 
-    # ======================================================
-    # BUILD CONTEXT TEXT
-    # ======================================================
     if normalized_snippets:
         if module_names:
             if len(module_names) > 1:
@@ -252,18 +198,15 @@ def generate_assessment_description(
         context_parts = []
         for i, snippet in enumerate(normalized_snippets[:5], 1):
             if len(snippet) > 2000:
-                snippet = snippet[:2000] + "... [truncated]"
+                snippet = snippet[:2000] + "... [dipotong]"
             context_parts.append(f"[Konteks {i}]\n{snippet}")
 
         context_text = f"{module_info}\n\n" + "\n\n".join(context_parts)
-        print(f"[DEBUG] Context length: {len(context_text)} chars")
+        print(f"[DEBUG] Panjang konteks: {len(context_text)} karakter")
     else:
-        print("WARNING: WARNING: No context!")
+        print("⚠️ Tidak ada konteks!")
         context_text = f"(Tidak ada konteks, buat soal umum tentang {concepts})"
 
-    # ======================================================
-    # ULTRA-STRICT SYSTEM MESSAGE
-    # ======================================================
     system_message = {
         "role": "system",
         "content": f"""Anda adalah asisten dosen yang membuat soal praktikum SEDERHANA untuk mata kuliah {subject_name}.
@@ -303,9 +246,6 @@ ALERT: ATURAN ABSOLUT - TIDAK BOLEH DILANGGAR:
 Jika modul hanya mengajarkan tipe data dan operator, maka soal HANYA boleh tentang tipe data dan operator. TITIK."""
     }
 
-    # ======================================================
-    # ULTRA-STRICT USER INSTRUCTION
-    # ======================================================
     user_instruction = f"""
 TARGET: TUGAS: Buat soal praktikum SEDERHANA untuk {subject_name}
 
@@ -426,24 +366,15 @@ Jika ada yang TIDAK, REVISI soal Anda!
 **SUBMIT HANYA JIKA SEMUA ✅**
 """
 
-    # ======================================================
-    # BUILD MESSAGES
-    # ======================================================
     user_message = {"role": "user", "content": user_instruction}
     messages = [system_message, user_message]
 
-    # ======================================================
-    # DEBUG STATISTICS
-    # ======================================================
     total_len = len(system_message["content"]) + len(user_message["content"])
-    print(f"\n[DEBUG] Prompt length: {total_len} chars (~{total_len // 4} tokens)")
+    print(f"\n[DEBUG] Panjang prompt: {total_len} karakter (~{total_len // 4} tokens)")
     if total_len < 100:
-        raise ValueError(f"Prompt too short ({total_len} chars)!")
+        raise ValueError(f"Prompt terlalu pendek ({total_len} karakter)!")
 
-    # ======================================================
-    # CALL LLM
-    # ======================================================
-    print(f"\n[DEBUG] Calling LLM for {language}...")
+    print(f"\n[DEBUG] Memanggil LLM untuk {language}...")
     llm_start_time = time.time()
 
     try:
@@ -451,48 +382,20 @@ Jika ada yang TIDAK, REVISI soal Anda!
         execution_time_ms = int((time.time() - llm_start_time) * 1000)
 
         if not result or not result.strip():
-            raise Exception("LLM returned empty response.")
+            raise Exception("LLM mengembalikan response kosong.")
 
-        print(f"\n[DEBUG] Response: {len(result)} chars")
+        print(f"\n[DEBUG] Response: {len(result)} karakter")
         print(f"Preview: {result[:150]}...")
 
-        # ======================================================
-        # LOG SUCCESS
-        # ======================================================
-        if generation_id:
-            try:
-                generation_logger.update_generation_success(
-                    generation_id=generation_id,
-                    generated_content=result,
-                    execution_time_ms=execution_time_ms
-                )
-            except Exception as e:
-                logger.error(f"Failed to log generation success: {str(e)}")
-
-        # ======================================================
-        # VALIDATE TAGS
-        # ======================================================
         required_tags = ["#SOAL", "#REQUIREMENTS", "#EXPECTED OUTPUT", "#KUNCI JAWABAN"]
         missing = [t for t in required_tags if t not in result]
 
         if missing:
-            print(f"WARNING: Missing tags: {', '.join(missing)}")
+            print(f"⚠️ Tag tidak lengkap: {', '.join(missing)}")
         else:
-            print("SUCCESS: All required tags present")
+            print("✓ Semua tag yang diperlukan ada")
 
         return result
 
     except Exception as e:
-        # ======================================================
-        # LOG ERROR
-        # ======================================================
-        if generation_id:
-            try:
-                generation_logger.update_generation_error(
-                    generation_id=generation_id,
-                    error_message=str(e)
-                )
-            except Exception as log_error:
-                logger.error(f"Failed to log generation error: {str(log_error)}")
-
         raise e

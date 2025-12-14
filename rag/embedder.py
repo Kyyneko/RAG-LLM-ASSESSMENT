@@ -23,31 +23,29 @@ class Embedder:
 
     def __new__(cls, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         if cls._instance is None:
-            # === Auto-login Hugging Face ===
             token = os.getenv("HUGGINGFACE_HUB_TOKEN")
             if token:
                 try:
                     login(token=token)
-                    print("SUCCESS: Login Hugging Face berhasil (token dari .env).")
+                    print("✓ Login Hugging Face berhasil (token dari .env)")
                 except Exception as e:
-                    print(f"WARNING:  Gagal login Hugging Face: {e}")
+                    print(f"⚠️ Gagal login Hugging Face: {e}")
             else:
-                print("ℹ️  Tidak ada token Hugging Face di environment, mencoba tanpa login.")
+                print("ℹ️ Tidak ada token Hugging Face di environment, mencoba tanpa login")
 
-            # === Muat model utama dengan fallback ===
             try:
                 print(f"Memuat model embedding: {model_name}")
                 cls._instance = super().__new__(cls)
                 cls._model = SentenceTransformer(model_name)
                 cls._dim = cls._model.get_sentence_embedding_dimension()
-                print(f"SUCCESS: Model berhasil dimuat. Dimensi: {cls._dim}")
+                print(f"✓ Model berhasil dimuat. Dimensi: {cls._dim}")
             except Exception as e:
-                print(f"WARNING:  Gagal memuat model '{model_name}': {e}")
-                print("→ Menggunakan model fallback: paraphrase-MiniLM-L6-v2 (publik).")
+                print(f"⚠️ Gagal memuat model '{model_name}': {e}")
+                print("→ Menggunakan model fallback: paraphrase-MiniLM-L6-v2 (publik)")
                 cls._instance = super().__new__(cls)
                 cls._model = SentenceTransformer("paraphrase-MiniLM-L6-v2")
                 cls._dim = cls._model.get_sentence_embedding_dimension()
-                print(f"SUCCESS: Fallback model dimuat. Dimensi: {cls._dim}")
+                print(f"✓ Fallback model dimuat. Dimensi: {cls._dim}")
         return cls._instance
 
     @property

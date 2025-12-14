@@ -1,5 +1,3 @@
-# rag/pipeline.py
-
 import os
 import time
 from .extractor import extract_text
@@ -40,7 +38,6 @@ def process_files(file_paths: list[str], embedder: Embedder = None,
         filename = os.path.basename(file_path)
         print(f"[{idx}/{total_files}] Memproses file: {filename}")
         
-        # 1. Ekstraksi teks
         print("  - Mengekstrak teks...")
         text = extract_text(file_path)
         
@@ -50,7 +47,6 @@ def process_files(file_paths: list[str], embedder: Embedder = None,
         
         print(f"  - Teks berhasil diekstrak ({len(text)} karakter)")
         
-        # 2. Pemecahan teks (chunking) - UPDATED: semantic chunking
         print("  - Membuat potongan teks (chunks) dengan semantic splitting...")
         chunks = list(create_chunks(text, max_chars=1000, overlap=200))
         
@@ -60,7 +56,6 @@ def process_files(file_paths: list[str], embedder: Embedder = None,
         
         print(f"  - Total chunk dibuat: {len(chunks)}")
         
-        # 3. Buat metadata untuk setiap chunk
         metadata = [{
             "source": filename,
             "file_path": file_path,
@@ -69,11 +64,9 @@ def process_files(file_paths: list[str], embedder: Embedder = None,
             "total_chunks": len(chunks)
         } for i in range(len(chunks))]
         
-        # 4. Embedding
         print("  - Menghasilkan embedding...")
         embeddings = embedder.encode(chunks)
         
-        # 5. Tambahkan ke VectorStore dengan metadata
         print("  - Menambahkan ke vector store...")
         vectorstore.add(embeddings, chunks, metadata)
         
@@ -112,11 +105,9 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
     index_path = f"{cache_dir}/subject_{subject_id}.index"
     data_path = f"{cache_dir}/subject_{subject_id}.pkl"
     
-    # Cek apakah cache valid
     if use_cache and os.path.exists(index_path) and os.path.exists(data_path):
         conn = get_connection()
         with conn.cursor() as cur:
-            # Cek apakah ada dokumen baru yang belum diindeks
             cur.execute("""
                 SELECT COUNT(*) as new_docs 
                 FROM rag_source_documents 
@@ -127,8 +118,7 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
             new_docs_count = result['new_docs'] if result else 0
             
             if new_docs_count == 0:
-                # Tidak ada update, gunakan cache
-                print(f"SUCCESS: Menggunakan cached vector store untuk subject {subject_id}")
+                print(f"✓ Menggunakan cached vector store untuk subject {subject_id}")
                 conn.close()
                 
                 try:
@@ -141,20 +131,18 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
                     }
                     return vectorstore, metadata
                 except Exception as e:
-                    print(f"WARNING:  Cache loading gagal: {e}. Rebuilding...")
+                    print(f"⚠️ Cache loading gagal: {e}. Membangun ulang...")
         
         conn.close()
     
-    # Jika tidak ada cache atau ada update, rebuild
-    print(f"⚙️  Membangun ulang vector store untuk subject {subject_id}")
+    print(f"⚙️ Membangun ulang vector store untuk subject {subject_id}")
     vectorstore, metadata = _build_vectorstore_from_db(subject_id)
     
-    # Simpan ke cache
     try:
         vectorstore.save_to_disk(index_path, data_path)
         metadata["cached"] = True
     except Exception as e:
-        print(f"WARNING:  Gagal menyimpan cache: {e}")
+        print(f"⚠️ Gagal menyimpan cache: {e}")
         metadata["cached"] = False
     
     return vectorstore, metadata
@@ -195,7 +183,7 @@ def _build_vectorstore_from_db(subject_id: int):
             docs = cur.fetchall()
             
             if not docs:
-                print(f"ℹ️  Tidak ada dokumen baru untuk subject_id={subject_id}")
+                print(f"ℹ️ Tidak ada dokumen baru untuk subject_id={subject_id}")
                 return vectorstore, metadata
             
             print(f"📄 Ditemukan {len(docs)} dokumen untuk diindeks")
@@ -206,25 +194,22 @@ def _build_vectorstore_from_db(subject_id: int):
                 file_name = doc["file_name"]
                 
                 if not os.path.exists(file_path):
-                    print(f"WARNING:  File tidak ditemukan: {file_path}")
+                    print(f"⚠️ File tidak ditemukan: {file_path}")
                     metadata["failed_files"].append(file_name)
                     continue
                 
-                print(f"  Processing: {file_name}")
+                print(f"  Memproses: {file_name}")
                 
-                # 1. Ekstraksi teks
                 text = extract_text(file_path)
                 if not text:
                     metadata["failed_files"].append(file_name)
                     continue
                 
-                # 2. Pemecahan teks (semantic chunking)
                 chunks = list(create_chunks(text, max_chars=1000, overlap=200))
                 if not chunks:
                     metadata["failed_files"].append(file_name)
                     continue
                 
-                # 3. Buat metadata
                 chunk_metadata = [{
                     "source": file_name,
                     "file_path": file_path,
@@ -233,14 +218,12 @@ def _build_vectorstore_from_db(subject_id: int):
                     "doc_id": doc_id
                 } for i in range(len(chunks))]
                 
-                # 4. Embedding dan indexing
                 embeddings = embedder.encode(chunks)
                 vectorstore.add(embeddings, chunks, chunk_metadata)
                 
                 metadata["docs_processed"] += 1
                 metadata["chunks_indexed"] += len(chunks)
                 
-                # 5. Update status dokumen di database
                 cur.execute("""
                     UPDATE rag_source_documents
                     SET is_indexed = TRUE
@@ -248,10 +231,10 @@ def _build_vectorstore_from_db(subject_id: int):
                 """, (doc_id,))
                 
                 conn.commit()
-                print(f"  SUCCESS: {len(chunks)} chunks indexed")
+                print(f"  ✓ {len(chunks)} chunks terindeks")
         
     except Exception as e:
-        print(f"ERROR: Kesalahan dalam build_vectorstore_for_subject: {str(e)}")
+        print(f"✗ Kesalahan dalam build_vectorstore_for_subject: {str(e)}")
         conn.rollback()
         raise e
     finally:
