@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -18,8 +18,8 @@ jobs:
           password: ${{ secrets.DEPLOY_PASSWORD }}
           script: |
             cd /opt/RAG-LLM-ASSESSMENT
-            git pull origin main
+            git pull origin master
             source venv/bin/activate
             pip install -r requirements.txt
             sudo systemctl restart rag-assessment
-            echo "✓ Deployment selesai!"
+            echo "Deployment selesai!"
