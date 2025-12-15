@@ -14,8 +14,9 @@ cryptography
 
 
 # ============================================================
-# MACHINE LEARNING & EMBEDDING
+# MACHINE LEARNING & EMBEDDING (CPU-only for production)
 # ============================================================
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
 sentence-transformers>=2.2.0
@@ -37,11 +38,12 @@ requests
 
 
 # ============================================================
-# OPTIONAL: RERANKING (Uncomment jika ingin gunakan reranking)
+# RERANKING & TRANSFORMERS
 # ============================================================
-# Untuk reranking dengan cross-encoder (optional, bisa diaktifkan nanti)
-# Jika ingin aktifkan reranking, uncomment baris berikut:
 transformers>=4.30.0
 
 
+# ============================================================
+# DATA PROCESSING
+# ============================================================
 pandas
