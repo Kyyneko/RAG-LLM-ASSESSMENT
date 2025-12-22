@@ -209,74 +209,107 @@ def generate_assessment_description(
 
     system_message = {
         "role": "system",
-        "content": f"""Anda adalah asisten dosen yang membuat soal praktikum SEDERHANA untuk mata kuliah {subject_name}.
+        "content": f"""Anda adalah asisten dosen EXPERT yang membuat SOAL CERITA praktikum untuk mata kuliah {subject_name}.
 
-ALERT: ATURAN ABSOLUT - TIDAK BOLEH DILANGGAR:
+DEFINISI SOAL CERITA:
+Soal cerita adalah soal yang memiliki KONTEKS NARATIF dengan tokoh, tempat, dan situasi nyata.
+Soal HARUS dimulai dengan cerita/skenario, BUKAN langsung perintah teknis.
 
-1. ERROR: DILARANG KERAS menambahkan konsep yang TIDAK DISEBUTKAN EKSPLISIT di modul
-2. ERROR: DILARANG menggunakan:
-   - try-except (kecuali EKSPLISIT ada di modul)
-   - function/def (kecuali EKSPLISIT ada di modul)
-   - class (kecuali EKSPLISIT ada di modul)
-   - import library (kecuali EKSPLISIT ada di modul)
-   - konsep advanced apapun yang tidak ada di modul
+CONTOH SOAL CERITA YANG BENAR:
+✅ "Toko Elektronik 'Maju Jaya' milik Pak Budi memberikan diskon khusus untuk pelanggan setia. 
+Jika total belanja lebih dari Rp 1.000.000, pelanggan mendapat diskon 15%. 
+Jika pelanggan adalah member, ada tambahan diskon 5%. 
+Buatlah program kasir untuk menghitung total yang harus dibayar pelanggan..."
 
-3. ✅ HANYA BOLEH menggunakan:
-   - Sintaks dasar yang DISEBUTKAN di modul
-   - Operator yang DITUNJUKKAN di modul
-   - Tipe data yang DIJELASKAN di modul
-   - Struktur kontrol yang ADA di modul (if, for, while, dll)
+✅ "Perpustakaan kampus UNHAS menerapkan sistem denda keterlambatan pengembalian buku.
+Denda dihitung Rp 1.000 per hari untuk 7 hari pertama, dan Rp 2.000 per hari setelahnya.
+Mahasiswa dengan status 'VIP' mendapat keringanan 50%. 
+Buatlah program untuk menghitung denda..."
 
-4. ✅ Soal harus:
-   - Sederhana dan langsung (straight-forward)
-   - Bisa diselesaikan dengan kode linear/sequential
-   - Tidak memerlukan modularisasi jika tidak diajarkan
-   - Sesuai dengan contoh-contoh di modul
+CONTOH YANG SALAH (BUKAN SOAL CERITA):
+❌ "Buatlah program untuk menentukan bilangan genap atau ganjil"
+❌ "Buatlah program untuk menentukan status umur seseorang"
+❌ "Buatlah program yang menerima input dan menampilkan output"
+
+ATURAN OUTPUT:
+- LANGSUNG mulai dengan **SOAL:** tanpa pengantar
+- Output HANYA 4 section: **SOAL:**, **REQUIREMENTS:**, **EXPECTED OUTPUT:**, **KUNCI JAWABAN:**
+- Soal HARUS berbentuk cerita dengan tokoh dan situasi nyata
+
+ATURAN KONTEN:
+- WAJIB ada nama tokoh/tempat dalam soal (Pak Budi, Toko ABC, Rumah Sakit X, dll)
+- WAJIB ada konteks situasi yang jelas
+- Kode jawaban minimal 25-40 baris dengan logika kompleks
 
 **BAHASA:** {language}
 **OUTPUT:** {output_type}
 
-**FORMAT WAJIB:**
-#SOAL - Deskripsi singkat dan jelas
-#REQUIREMENTS - 3-5 poin teknis SESUAI materi modul
-#EXPECTED OUTPUT - Contoh hasil program
-#KUNCI JAWABAN - Kode {language} sederhana tanpa konsep tambahan
+**FORMAT:**
+**SOAL:**
+[Judul Menarik]
 
-**PRINSIP:**
-Jika modul hanya mengajarkan tipe data dan operator, maka soal HANYA boleh tentang tipe data dan operator. TITIK."""
+[CERITA: Nama tokoh + tempat + situasi + kondisi bisnis/logika]
+[Lalu perintah untuk membuat program]
+
+**REQUIREMENTS:**
+1. [Requirement berdasarkan cerita]
+...
+
+**EXPECTED OUTPUT:**
+[Contoh interaksi lengkap]
+
+**KUNCI JAWABAN:**
+```{language.lower()}
+[Kode lengkap]
+```"""
     }
 
     user_instruction = f"""
-TARGET: TUGAS: Buat soal praktikum SEDERHANA untuk {subject_name}
+=== PARAMETER WAJIB DIPERTIMBANGKAN ===
 
-=== INFORMASI ===
-Mata Kuliah: {subject_name}
-Kelas: {class_name}
-Topik: {topic}
-Bahasa: {language}
+📚 MATA KULIAH: {subject_name}
+📝 TOPIK UTAMA: {topic}
+🎯 TINGKAT KESULITAN: Sesuaikan kompleksitas soal dengan topik yang diminta
+👥 KELAS: {class_name}
+💻 BAHASA: {language}
 
-=== ALERT: ATURAN KETAT - BACA DENGAN TELITI ===
+=== INSTRUKSI GENERATE SOAL CERITA ===
 
-**STEP 1: ANALISIS MODUL**
-Baca konteks modul di bawah dan catat:
-- Konsep apa saja yang DISEBUTKAN EKSPLISIT?
-- Sintaks apa saja yang DITUNJUKKAN dengan CONTOH?
-- Fungsi/method apa yang DIDEMONSTRASIKAN?
-- Library apa yang DIGUNAKAN dalam contoh?
+**LANGKAH 1: ANALISIS MODUL**
+Baca konteks modul dan identifikasi konsep yang bisa dikombinasikan.
 
-**STEP 2: VALIDASI KONSEP**
-Sebelum membuat soal, cek:
-☐ Apakah modul mengajarkan function? → Jika TIDAK, jangan pakai def
-☐ Apakah modul mengajarkan try-except? → Jika TIDAK, jangan pakai error handling
-☐ Apakah modul mengajarkan class? → Jika TIDAK, jangan pakai OOP
-☐ Apakah modul mengajarkan import? → Jika TIDAK, jangan import library
+**LANGKAH 2: BUAT SKENARIO SESUAI TINGKAT KESULITAN**
 
-**STEP 3: BUAT SOAL SEDERHANA**
-Soal harus:
-- Menggunakan HANYA konsep yang ada di modul
-- Kode jawaban sederhana (bukan modular/complex)
-- Tidak memerlukan "best practices" yang tidak diajarkan
-- Bisa dikerjakan mahasiswa yang HANYA belajar dari modul ini
+🎯 TOPIK: {topic}
+
+⚡ TINGKAT KESULITAN - SANGAT PENTING! IKUTI DENGAN KETAT!
+
+📗 MUDAH:
+- 2 kondisi saja (if-else sederhana)
+- 1 input
+- Kode 10-15 baris
+- Contoh: Cek positif/negatif, genap/ganjil
+
+📙 SEDANG:
+- 3-4 kondisi (if-elif-else)
+- 2-3 input
+- Kode 20-30 baris
+- Contoh: Kategori nilai (A/B/C/D/E), kategori BMI
+
+📕 SULIT - HARUS KOMPLEKS!:
+- 5+ kondisi dengan NESTED IF (if didalam if)
+- 4+ input berbeda
+- Kode MINIMAL 40-60 baris
+- WAJIB ada: nested conditions, multiple calculations, validasi input
+- Contoh skenario SULIT:
+  "Rental mobil dengan tarif berbeda: weekday/weekend, durasi sewa, jenis mobil, member/non-member, asuransi"
+  "Gaji karyawan dengan tunjangan: jabatan, masa kerja, lembur, potongan pajak bertingkat"
+
+**LANGKAH 3: TULIS SOAL CERITA**
+- Ada tokoh dan tempat (Pak Budi, Toko X, dll)
+- Deskripsi skenario yang DETAIL
+- Requirements yang SPESIFIK
+- Expected output dengan BANYAK KASUS TEST
 
 **CONTOH BATASAN:**
 
@@ -300,25 +333,34 @@ print("Luas:", luas)
 
     if custom_notes and custom_notes.strip():
         user_instruction += f"""
-=== CATATAN KHUSUS ===
-{custom_notes.strip()}
+=== 🚨 CATATAN KHUSUS DARI USER - WAJIB DIIKUTI! 🚨 ===
 
-WARNING: Ikuti catatan di atas SAMBIL tetap mematuhi aturan ketat modul.
+"{custom_notes.strip()}"
+
+⚠️ INSTRUKSI DI ATAS ADALAH PERINTAH LANGSUNG!
+- Soal yang dibuat HARUS mengikuti catatan ini
+- Jika catatan menyebutkan topik spesifik, fokus pada topik tersebut
+- Jika catatan menyebutkan format tertentu, ikuti format tersebut
+- PRIORITAS: Catatan user > Isi modul umum
 """
 
     user_instruction += f"""
-=== ISI MODUL (SUMBER TUNGGAL) ===
+=== ISI MODUL (SUMBER TUNGGAL - PALING PENTING!) ===
 {context_text}
 
-SEARCH: INSTRUKSI ANALISIS:
-1. Baca SELURUH konteks modul di atas
-2. List konsep/sintaks yang EKSPLISIT disebutkan
-3. Buat soal yang HANYA menggunakan list tersebut
-4. JANGAN menambahkan konsep lain sama sekali
+CRITICAL: INSTRUKSI ANALISIS:
+1. ABAIKAN topik yang diminta jika TIDAK ADA di modul
+2. Baca SELURUH konteks modul di atas
+3. List konsep/sintaks yang EKSPLISIT disebutkan DI MODUL
+4. Buat soal yang HANYA menggunakan list tersebut
+5. JANGAN menambahkan konsep lain yang tidak ada di modul
+6. Soal HARUS berdasarkan ISI MODUL, bukan topik yang diminta user
+
+WARNING: Jika modul tentang Conditional Statement tapi user minta MVC, buat soal tentang Conditional Statement!
 
 === FORMAT OUTPUT ===
 
-#SOAL
+**SOAL:**
 [Judul Sederhana]
 
 Buatlah program {language} sederhana yang [deskripsi task menggunakan HANYA konsep dari modul].
@@ -327,7 +369,7 @@ Contoh: "Buatlah program untuk menghitung luas persegi panjang menggunakan input
 
 JANGAN: "Buatlah program dengan function untuk menghitung luas..."
 
-#REQUIREMENTS
+**REQUIREMENTS:**
 1. [Requirement sesuai materi modul]
 2. [Requirement sesuai materi modul]
 3. [Requirement sesuai materi modul]
@@ -336,12 +378,12 @@ JANGAN: "Buatlah program dengan function untuk menghitung luas..."
 
 WARNING: Requirements HARUS tentang konsep yang ADA di modul
 
-#EXPECTED OUTPUT
+**EXPECTED OUTPUT:**
 ```
 [Contoh output program sesuai {output_type}]
 ```
 
-#KUNCI JAWABAN
+**KUNCI JAWABAN:**
 ```{language.lower()}
 # Kode sederhana tanpa function/class/try-except
 # (kecuali konsep tersebut ADA di modul)
@@ -351,19 +393,19 @@ WARNING: Requirements HARUS tentang konsep yang ADA di modul
 [kode di sini]
 ```
 
----
+PENTING: 
+- JANGAN tambahkan penjelasan atau klarifikasi apapun di awal
+- JANGAN tambahkan checklist atau FINAL CHECK
+- Langsung mulai dengan **SOAL:**
+- Output HANYA berisi 4 section: SOAL, REQUIREMENTS, EXPECTED OUTPUT, KUNCI JAWABAN
+"""
 
-✅ FINAL CHECK SEBELUM SUBMIT:
+    # Tambahkan reminder catatan di akhir jika ada
+    if custom_notes and custom_notes.strip():
+        user_instruction += f"""
 
-1. ☐ Apakah SEMUA konsep dalam kode ADA di modul?
-2. ☐ Apakah TIDAK ada function jika modul tidak mengajarkan function?
-3. ☐ Apakah TIDAK ada try-except jika modul tidak mengajarkan error handling?
-4. ☐ Apakah TIDAK ada import jika modul tidak menggunakan library?
-5. ☐ Apakah kode sesederhana contoh di modul?
-
-Jika ada yang TIDAK, REVISI soal Anda!
-
-**SUBMIT HANYA JIKA SEMUA ✅**
+🔔 REMINDER FINAL: Jangan lupa catatan user: "{custom_notes.strip()}"
+Pastikan soal sudah SESUAI dengan catatan tersebut!
 """
 
     user_message = {"role": "user", "content": user_instruction}
@@ -387,7 +429,7 @@ Jika ada yang TIDAK, REVISI soal Anda!
         print(f"\n[DEBUG] Response: {len(result)} karakter")
         print(f"Preview: {result[:150]}...")
 
-        required_tags = ["#SOAL", "#REQUIREMENTS", "#EXPECTED OUTPUT", "#KUNCI JAWABAN"]
+        required_tags = ["**SOAL:", "**REQUIREMENTS:", "**EXPECTED OUTPUT:", "**KUNCI JAWABAN:"]
         missing = [t for t in required_tags if t not in result]
 
         if missing:

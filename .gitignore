@@ -32,3 +32,10 @@ upload/
 # Model cache
 .cache/
 models/
+hasil/
+docs/
+
+Modul-Modul-Lab-SI/
+penulisan/
+streamlit_app/
+analyze_evaluations.py

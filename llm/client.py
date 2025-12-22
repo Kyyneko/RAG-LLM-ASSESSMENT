@@ -53,7 +53,8 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
         if "role" not in msg or "content" not in msg:
             raise ValueError(f"Message {i} tidak memiliki 'role' atau 'content'")
     
-    model_name = model or os.getenv("LLM_MODEL", "google/gemma-3-27b-it:free")
+    # Hardcode ke OpenAI GPT-OSS 120B
+    model_name = model or "openai/gpt-oss-120b:free"
     
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {

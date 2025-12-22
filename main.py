@@ -13,7 +13,7 @@ def create_app() -> Flask:
     app.config["UPLOAD_FOLDER"] = "upload/"
 
     app.register_blueprint(rag_bp, url_prefix="/api/rag")
-
+ 
     @app.route("/")
     def home():
         """Endpoint utama untuk memverifikasi status API."""
