@@ -120,6 +120,7 @@ def generate_assessment_description(
     assessment_task_id: int = None,
     generation_type: str = "assessment",
     generated_by: int = None,
+    difficulty: str = "Sedang",
 ) -> str:
     """
     Membuat deskripsi tugas praktikum lintas mata kuliah (multi-language).
@@ -264,46 +265,51 @@ ATURAN KONTEN:
 ```"""
     }
 
+    # Normalisasi difficulty
+    difficulty_level = difficulty.lower() if difficulty else "sedang"
+    print(f"[DEBUG] Difficulty: {difficulty_level}")
+    
     user_instruction = f"""
 === PARAMETER WAJIB DIPERTIMBANGKAN ===
 
 📚 MATA KULIAH: {subject_name}
 📝 TOPIK UTAMA: {topic}
-🎯 TINGKAT KESULITAN: Sesuaikan kompleksitas soal dengan topik yang diminta
+🎯 TINGKAT KESULITAN: {difficulty.upper()}
 👥 KELAS: {class_name}
 💻 BAHASA: {language}
 
 === INSTRUKSI GENERATE SOAL CERITA ===
 
 **LANGKAH 1: ANALISIS MODUL**
-Baca konteks modul dan identifikasi konsep yang bisa dikombinasikan.
+Baca SELURUH konteks modul dan identifikasi SEMUA konsep yang tersedia.
 
 **LANGKAH 2: BUAT SKENARIO SESUAI TINGKAT KESULITAN**
 
 🎯 TOPIK: {topic}
+🎯 DIFFICULTY: {difficulty.upper()}
 
-⚡ TINGKAT KESULITAN - SANGAT PENTING! IKUTI DENGAN KETAT!
+⚡ PANDUAN TINGKAT KESULITAN - WAJIB DIIKUTI DENGAN KETAT!
 
 📗 MUDAH:
-- 2 kondisi saja (if-else sederhana)
-- 1 input
-- Kode 10-15 baris
-- Contoh: Cek positif/negatif, genap/ganjil
+- Cakupan: HANYA 1 konsep dasar dari modul
+- Jika topik looping: gunakan HANYA for ATAU HANYA while (pilih satu)
+- Jika topik conditional: gunakan HANYA if-else sederhana
+- 2 kondisi, 1-2 input, kode 10-15 baris
 
 📙 SEDANG:
-- 3-4 kondisi (if-elif-else)
-- 2-3 input
-- Kode 20-30 baris
-- Contoh: Kategori nilai (A/B/C/D/E), kategori BMI
+- Cakupan: 2-3 konsep dari modul
+- Jika topik looping: kombinasi for DAN while (2 jenis loop)
+- Jika topik conditional: if-elif-else dengan beberapa cabang
+- 3-4 kondisi, 2-3 input, kode 20-30 baris
 
-📕 SULIT - HARUS KOMPLEKS!:
-- 5+ kondisi dengan NESTED IF (if didalam if)
+📕 SULIT - WAJIB MENCAKUP SELURUH KONSEP DARI MODUL:
+- Cakupan: SEMUA konsep yang ada di konteks modul WAJIB digunakan
+- Jika topik looping: WAJIB ada for, while, nested loop, break, continue (SEMUA!)
+- Jika topik conditional: WAJIB ada if, elif, else, nested if, operator logika (SEMUA!)
+- 5+ kondisi dengan nested logic
 - 4+ input berbeda
 - Kode MINIMAL 40-60 baris
-- WAJIB ada: nested conditions, multiple calculations, validasi input
-- Contoh skenario SULIT:
-  "Rental mobil dengan tarif berbeda: weekday/weekend, durasi sewa, jenis mobil, member/non-member, asuransi"
-  "Gaji karyawan dengan tunjangan: jabatan, masa kerja, lembur, potongan pajak bertingkat"
+- WAJIB mengintegrasikan SELURUH variasi sintaks yang diajarkan di modul
 
 **LANGKAH 3: TULIS SOAL CERITA**
 - Ada tokoh dan tempat (Pak Budi, Toko X, dll)
@@ -398,6 +404,38 @@ PENTING:
 - JANGAN tambahkan checklist atau FINAL CHECK
 - Langsung mulai dengan **SOAL:**
 - Output HANYA berisi 4 section: SOAL, REQUIREMENTS, EXPECTED OUTPUT, KUNCI JAWABAN
+"""
+
+    # Tambahkan instruksi khusus untuk difficulty SULIT
+    if difficulty_level == "sulit":
+        user_instruction += f"""
+
+=== 🔴 INSTRUKSI WAJIB UNTUK DIFFICULTY SULIT 🔴 ===
+
+ANDA HARUS menggunakan SEMUA konsep yang ada di konteks modul!
+
+LANGKAH WAJIB:
+1. Baca SELURUH konteks modul yang diberikan di atas
+2. Identifikasi SETIAP sintaks dan konsep yang disebutkan
+3. Soal HARUS mengintegrasikan SEMUA konsep tersebut dalam SATU program
+
+CONTOH UNTUK MODUL LOOPING dengan difficulty SULIT:
+- WAJIB ada for loop untuk iterasi data/menu
+- WAJIB ada while loop untuk validasi input atau kondisi tertentu  
+- WAJIB ada nested loop (loop di dalam loop) untuk proses kompleks
+- WAJIB ada break untuk keluar dari loop pada kondisi tertentu
+- WAJIB ada continue untuk melewati iterasi pada kondisi tertentu
+
+CONTOH SKENARIO YANG BENAR UNTUK LOOPING SULIT:
+"Sistem kasir minimarket yang menggunakan:
+ - while True untuk menu utama yang terus berulang
+ - for loop untuk menampilkan daftar produk
+ - nested for untuk menghitung sub-total per kategori
+ - break untuk keluar saat user pilih 'Selesai'
+ - continue untuk melewati produk yang stoknya habis"
+
+⚠️ JANGAN buat soal yang hanya menggunakan sebagian konsep!
+⚠️ Jika konteks modul memiliki 5 konsep, soal WAJIB menggunakan 5 konsep tersebut!
 """
 
     # Tambahkan reminder catatan di akhir jika ada

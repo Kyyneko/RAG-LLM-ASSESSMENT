@@ -172,15 +172,34 @@ def generate_assessment():
         vectorstore = get_or_build_vectorstore(module_id, file_path, embedder)
         
         print("[Langkah 4] Melakukan retrieval konteks...")
-        query = f"Materi praktikum tentang {topic} dalam mata kuliah {subject_name}"
-        logger.info(f"Mencari konteks untuk: {query}")
+        
+        # Query berbeda berdasarkan tingkat kesulitan
+        difficulty_lower = tingkat_kesulitan.lower()
+        if difficulty_lower == "sulit":
+            # Query komprehensif untuk mengambil SELURUH materi modul
+            query = f"""Seluruh materi lengkap dan komprehensif tentang {topic} dalam {subject_name}. 
+            Termasuk semua konsep, sintaks, variasi, contoh kasus, dan penerapan lanjutan.
+            Cakup semua sub-topik seperti: for loop, while loop, do-while, nested loop, break, continue, 
+            dan semua teknik kontrol alur yang ada di modul."""
+            top_k = 10
+            initial_k = 30
+        elif difficulty_lower == "sedang":
+            query = f"Materi praktikum tentang {topic} dengan beberapa variasi konsep dalam {subject_name}"
+            top_k = 5
+            initial_k = 20
+        else:  # Mudah
+            query = f"Konsep dasar tentang {topic} dalam mata kuliah {subject_name}"
+            top_k = 3
+            initial_k = 10
+        
+        logger.info(f"Mencari konteks untuk difficulty '{tingkat_kesulitan}': {query[:100]}...")
         
         context_snippets = retrieve_context_with_reranking(
             vectorstore=vectorstore,
             embedder=embedder,
             query=query,
-            top_k=5,
-            initial_k=20
+            top_k=top_k,
+            initial_k=initial_k
         )
         
         if not context_snippets:
