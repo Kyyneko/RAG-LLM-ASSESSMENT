@@ -58,7 +58,8 @@ def preview_rag_generated_assessment(
     assistant_id: int,
     context_snippets: list,
     custom_notes: str = None,
-    generated_by: int = None
+    generated_by: int = None,
+    difficulty: str = "Sedang"
 ):
     """
     Generate assessment preview tanpa menyimpan ke database.
@@ -86,7 +87,8 @@ def preview_rag_generated_assessment(
         custom_notes=custom_notes,
         assessment_task_id=None,
         generation_type="preview",
-        generated_by=generated_by
+        generated_by=generated_by,
+        difficulty=difficulty
     )
 
     if not raw_output or not raw_output.strip():
@@ -105,7 +107,7 @@ def preview_rag_generated_assessment(
         "subject_name": subject_name,
         "context_count": len(context_snippets),
         "generated_at": datetime.now().isoformat(),
-        "model": "google/gemini-2.0-flash-exp:free",
+        "model": "openai/gpt-oss-120b:free",
         "custom_notes": custom_notes
     }
 
@@ -330,7 +332,7 @@ def create_rag_generated_task(
         "class_name": class_name,
         "context_count": len(context_snippets),
         "generated_at": datetime.now().isoformat(),
-        "model": "google/gemini-2.0-flash-exp:free",
+        "model": "openai/gpt-oss-120b:free",
         "is_replacement": is_replace_mode
     }
     

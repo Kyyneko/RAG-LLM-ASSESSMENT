@@ -172,25 +172,31 @@ def generate_assessment():
         vectorstore = get_or_build_vectorstore(module_id, file_path, embedder)
         
         print("[Langkah 4] Melakukan retrieval konteks...")
-        
-        # Query berbeda berdasarkan tingkat kesulitan
+
+        # Query berbeda berdasarkan tingkat kesulitan - LEBIH DINAMIS SESUAI TOPIK
         difficulty_lower = tingkat_kesulitan.lower()
         if difficulty_lower == "sulit":
             # Query komprehensif untuk mengambil SELURUH materi modul
-            query = f"""Seluruh materi lengkap dan komprehensif tentang {topic} dalam {subject_name}. 
-            Termasuk semua konsep, sintaks, variasi, contoh kasus, dan penerapan lanjutan.
-            Cakup semua sub-topik seperti: for loop, while loop, do-while, nested loop, break, continue, 
-            dan semua teknik kontrol alur yang ada di modul."""
-            top_k = 10
-            initial_k = 30
+            # Query ini akan menarik SEMUA variasi konsep yang ada di topik
+            query = f"""Semua materi lengkap tentang {topic} dalam mata kuliah {subject_name}.
+            Saya butuh SELURUH konsep, semua variasi sintaks, semua contoh, dan semua teknik yang terkait dengan {topic}.
+            Termasuk setiap sub-topik, variasi, dan implementasi yang ada di materi modul ini.
+            Contoh: jika tentang looping, butuh for, while, nested, break, continue, do-while, semua."""
+            top_k = 15
+            initial_k = 50
         elif difficulty_lower == "sedang":
-            query = f"Materi praktikum tentang {topic} dengan beberapa variasi konsep dalam {subject_name}"
-            top_k = 5
-            initial_k = 20
+            # Query untuk mengambil beberapa konsep terkait topik
+            query = f"""Materi praktikum tentang {topic} dalam {subject_name}
+            beserta variasi dan konsep terkait. Saya butuh beberapa contoh penerapan {topic}
+            dengan berbagai skenario yang ada di modul."""
+            top_k = 8
+            initial_k = 25
         else:  # Mudah
-            query = f"Konsep dasar tentang {topic} dalam mata kuliah {subject_name}"
-            top_k = 3
-            initial_k = 10
+            # Query fokus konsep dasar saja
+            query = f"""Konsep dasar dan contoh sederhana tentang {topic} dalam mata kuliah {subject_name}.
+            Fokus pada pengertian dan contoh penggunaan dasar {topic}."""
+            top_k = 5
+            initial_k = 15
         
         logger.info(f"Mencari konteks untuk difficulty '{tingkat_kesulitan}': {query[:100]}...")
         
@@ -235,7 +241,8 @@ def generate_assessment():
             assistant_id=assistant_id,
             context_snippets=context_snippets,
             custom_notes=combined_notes,
-            generated_by=assistant_id
+            generated_by=assistant_id,
+            difficulty=tingkat_kesulitan
         )
 
         elapsed_time = time.time() - start_time

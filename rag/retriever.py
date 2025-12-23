@@ -5,10 +5,10 @@ from typing import Optional
 try:
     from sentence_transformers import CrossEncoder
     CROSS_ENCODER_AVAILABLE = True
-    print("✓ CrossEncoder berhasil diimpor")
+    print("[OK] CrossEncoder berhasil diimpor")
 except ImportError:
     CROSS_ENCODER_AVAILABLE = False
-    print("⚠️ CrossEncoder tidak tersedia dari sentence_transformers")
+    print("[WARNING] CrossEncoder tidak tersedia dari sentence_transformers")
 
 class CrossEncoderReranker:
     """CrossEncoder reranker untuk meningkatkan presisi retrieval."""
