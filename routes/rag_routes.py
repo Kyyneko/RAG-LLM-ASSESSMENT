@@ -339,17 +339,27 @@ def get_subjects():
 
 @rag_bp.route("/subjects/<int:subject_id>/modules", methods=["GET"])
 def get_modules_by_subject(subject_id: int):
-    """Mengambil semua module untuk subject tertentu (untuk Streamlit demo)."""
+    """
+    Mengambil semua module untuk subject tertentu (untuk Streamlit demo).
+    
+    Relasi: module ↔ session_module ↔ session ↔ class ↔ subject
+    """
     conn = None
 
     try:
         conn = get_connection()
         with conn.cursor() as cur:
+            # Query dengan proper relationship chain:
+            # module → session_module → session → class → subject
             cur.execute("""
-                SELECT id, title, file_name, uploaded_at
-                FROM module
-                ORDER BY uploaded_at DESC
-            """)
+                SELECT DISTINCT m.id, m.title, m.file_name, m.uploaded_at
+                FROM module m
+                INNER JOIN session_module sm ON m.id = sm.module_id
+                INNER JOIN session s ON sm.session_id = s.id
+                INNER JOIN class c ON s.class_id = c.id
+                WHERE c.subject_id = %s
+                ORDER BY m.title ASC
+            """, (subject_id,))
             data = cur.fetchall()
 
         return jsonify({
