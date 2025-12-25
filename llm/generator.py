@@ -168,19 +168,30 @@ def get_curriculum_context(subject_name: str, topic: str) -> str:
     topic_lower = topic.lower()
     
     # Find current module position (fuzzy match)
+    # IMPORTANT: For combined topics like "Data Types, Collection & Operator",
+    # we need to find the HIGHEST matching module to include all allowed concepts
     current_idx = -1
+    matched_modules = []
+    
     for idx, module in enumerate(curriculum):
         module_lower = module.lower()
         # Check if topic contains module name or vice versa
         if module_lower in topic_lower or topic_lower in module_lower:
-            current_idx = idx
-            break
+            matched_modules.append((idx, module))
+        
         # Check for partial match (e.g., "Data Types, Collection" matches "Data Types")
         for part in topic.split(","):
             part = part.strip().lower()
-            if part in module_lower or module_lower in part:
-                current_idx = idx
-                break
+            # Also handle "&" separator
+            for subpart in part.split("&"):
+                subpart = subpart.strip()
+                if subpart and (subpart in module_lower or module_lower in subpart):
+                    matched_modules.append((idx, module))
+    
+    # Take the HIGHEST index among all matches (to include all allowed concepts)
+    if matched_modules:
+        current_idx = max(idx for idx, _ in matched_modules)
+        print(f"[DEBUG] Matched modules: {[m for _, m in matched_modules]}, using highest: {curriculum[current_idx]}")
     
     if current_idx == -1:
         # Topic not found in curriculum, assume it's a new/combined module
