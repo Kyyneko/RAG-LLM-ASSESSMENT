@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# Testing/Analysis
+test_*.py
+analyze_*.py
+
+# Documentation
+penulisan/
+docs/
+
+# Temporary
+*.log
+*.tmp
+
+# Large files
+*.faiss
+*.pkl

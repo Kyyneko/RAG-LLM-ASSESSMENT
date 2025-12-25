@@ -1,0 +1,21 @@
+services:
+  rag-llm:
+    build: .
+    container_name: rag-llm-assessment
+    ports:
+      - "5002:5002"
+    environment:
+      - DB_HOST=${DB_HOST:-host.docker.internal}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    volumes:
+      - ./data:/app/data
+      - ./Modul-Modul-Lab-SI:/app/Modul-Modul-Lab-SI
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5002/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
