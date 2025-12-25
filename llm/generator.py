@@ -82,6 +82,153 @@ SUBJECT_CONFIGS = {
     },
 }
 
+# ============== URUTAN KURIKULUM LAB SI ==============
+# Digunakan untuk memastikan soal hanya menggunakan konsep yang SUDAH diajarkan
+CURRICULUM_ORDER = {
+    "Algoritma dan Pemrograman": [
+        "Data Types",
+        "Collection", 
+        "Operator",
+        "Condition",
+        "Looping",
+        "Function",
+        "Error Handling & RegEx",
+        "OOP"
+    ],
+    "Pemrograman Website": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "Database Connection",
+        "Laravel"
+    ],
+    "OOP JAVA": [
+        "Pengenalan Java",
+        "Class dan Object",
+        "Attribute",
+        "Behavior",
+        "Constructor",
+        "Encapsulation",
+        "Inheritance",
+        "Thread",
+        "Polymorphism"
+    ],
+    "Pemrograman Mobile": [
+        "Activity",
+        "Intent",
+        "RecyclerView",
+        "Fragment",
+        "Background Thread",
+        "Networking",
+        "SharedPreferences",
+        "SQLite"
+    ],
+    "Basis Data": [
+        "DDL",
+        "Query Dasar",
+        "DML",
+        "Operator",
+        "Relationship",
+        "Join",
+        "Function",
+        "Grouping",
+        "Subquery",
+        "Union",
+        "Intersect",
+        "Except",
+        "Transaction",
+        "Index & Control Flow"
+    ]
+}
+
+
+def get_curriculum_context(subject_name: str, topic: str) -> str:
+    """
+    Generate curriculum context untuk prompt, menentukan materi yang sudah diajarkan.
+    
+    Args:
+        subject_name: Nama mata kuliah
+        topic: Topik/modul saat ini
+        
+    Returns:
+        String curriculum context untuk dimasukkan ke prompt
+    """
+    # Normalize subject name
+    subject_key = None
+    subject_lower = subject_name.lower()
+    for key in CURRICULUM_ORDER.keys():
+        if key.lower() in subject_lower or subject_lower in key.lower():
+            subject_key = key
+            break
+    
+    if not subject_key:
+        return ""  # Unknown subject, skip curriculum context
+    
+    curriculum = CURRICULUM_ORDER[subject_key]
+    topic_lower = topic.lower()
+    
+    # Find current module position (fuzzy match)
+    current_idx = -1
+    for idx, module in enumerate(curriculum):
+        module_lower = module.lower()
+        # Check if topic contains module name or vice versa
+        if module_lower in topic_lower or topic_lower in module_lower:
+            current_idx = idx
+            break
+        # Check for partial match (e.g., "Data Types, Collection" matches "Data Types")
+        for part in topic.split(","):
+            part = part.strip().lower()
+            if part in module_lower or module_lower in part:
+                current_idx = idx
+                break
+    
+    if current_idx == -1:
+        # Topic not found in curriculum, assume it's a new/combined module
+        # Place it at the end of known curriculum
+        return f"""
+=== KONTEKS KURIKULUM ===
+Mata Kuliah: {subject_key}
+Modul: {topic} (modul baru/gabungan - diasumsikan setelah modul terakhir)
+
+Urutan materi dalam kurikulum:
+{chr(10).join([f"  {i+1}. {m}" for i, m in enumerate(curriculum)])}
+
+⚠️ SANGAT PENTING - PEMBATASAN MATERI:
+- Karena posisi modul tidak diketahui, asumsikan SEMUA materi sebelumnya sudah diajarkan
+- BOLEH menggunakan semua konsep dari daftar di atas
+- JANGAN gunakan konsep yang jelas-jelas di luar kurikulum mata kuliah ini
+"""
+    
+    # Generate list of allowed concepts (current + all previous)
+    allowed_modules = curriculum[:current_idx + 1]
+    forbidden_modules = curriculum[current_idx + 1:] if current_idx < len(curriculum) - 1 else []
+    
+    context = f"""
+=== KONTEKS KURIKULUM - SANGAT PENTING! ===
+Mata Kuliah: {subject_key}
+Modul Saat Ini: {topic} (urutan ke-{current_idx + 1} dari {len(curriculum)})
+
+✅ MATERI YANG SUDAH DIAJARKAN (BOLEH digunakan):
+{chr(10).join([f"  {i+1}. {m}" for i, m in enumerate(allowed_modules)])}
+"""
+    
+    if forbidden_modules:
+        context += f"""
+❌ MATERI YANG BELUM DIAJARKAN (DILARANG digunakan):
+{chr(10).join([f"  - {m}" for m in forbidden_modules])}
+
+⚠️ PEMBATASAN KERAS:
+- JANGAN gunakan konsep dari materi yang BELUM diajarkan
+- Contoh: Jika modul saat ini "Looping", JANGAN gunakan "Function" atau "OOP"
+- Soal dan kunci jawaban HARUS bisa dikerjakan dengan materi yang SUDAH diajarkan saja
+"""
+    else:
+        context += """
+✅ Ini adalah modul terakhir, semua materi sebelumnya boleh digunakan.
+"""
+    
+    return context
+
 
 def get_subject_config(subject_name: str) -> dict:
     """
@@ -269,6 +416,11 @@ ATURAN KONTEN:
     difficulty_level = difficulty.lower() if difficulty else "sedang"
     print(f"[DEBUG] Difficulty: {difficulty_level}")
     
+    # Generate curriculum context
+    curriculum_context = get_curriculum_context(subject_name, topic)
+    if curriculum_context:
+        print(f"[DEBUG] Curriculum context generated for: {topic}")
+    
     user_instruction = f"""
 === PARAMETER WAJIB DIPERTIMBANGKAN ===
 
@@ -277,6 +429,8 @@ ATURAN KONTEN:
 🎯 TINGKAT KESULITAN: {difficulty.upper()}
 👥 KELAS: {class_name}
 💻 BAHASA: {language}
+
+{curriculum_context}
 
 === INSTRUKSI GENERATE SOAL CERITA ===
 
