@@ -14,9 +14,10 @@ jobs:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DEPLOY_VPS_HOST }}
-          username: ${{ secrets.DEPLOY_VPS_USER }}
-          key: ${{ secrets.DEPLOY_VPS_SSH_KEY }}
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
           script: |
             cd /opt/RAG-LLM-ASSESSMENT
             
