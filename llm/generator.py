@@ -109,6 +109,8 @@ CURRICULUM_ORDER = {
         "Behavior",
         "Constructor",
         "Encapsulation",
+        "Abstract Class",
+        "Interface",
         "Inheritance",
         "Thread",
         "Polymorphism"
