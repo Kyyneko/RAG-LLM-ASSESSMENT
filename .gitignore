@@ -16,6 +16,7 @@ upload/
 *.pdf
 *.docx
 
+
 # IDE
 .vscode/
 .idea/
@@ -39,3 +40,6 @@ Modul-Modul-Lab-SI/
 penulisan/
 streamlit_app/
 analyze_evaluations.py
+analyze_comments.py
+analyze_stats.py
+test_generate.py

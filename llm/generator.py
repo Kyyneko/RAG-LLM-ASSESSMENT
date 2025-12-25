@@ -399,6 +399,14 @@ WARNING: Requirements HARUS tentang konsep yang ADA di modul
 [kode di sini]
 ```
 
+⚠️ KEBEBASAN METODE - SANGAT PENTING!
+- JANGAN mendikte metode/tools SPESIFIK yang harus digunakan
+- SALAH: "Gunakan dictionary untuk menyimpan data" atau "Harus menggunakan nested loop"
+- BENAR: "Simpan data produk" atau "Proses data dengan pengulangan yang sesuai"
+- Biarkan praktikan MEMILIH SENDIRI pendekatan solusi mereka
+- Ini melatih kreativitas dan pemahaman, bukan sekadar mengikuti instruksi
+- Di sesi asistensi, aslab bisa menanyakan ALASAN pemilihan tools tersebut
+
 PENTING: 
 - JANGAN tambahkan penjelasan atau klarifikasi apapun di awal
 - JANGAN tambahkan checklist atau FINAL CHECK
