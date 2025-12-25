@@ -354,10 +354,10 @@ def get_modules_by_subject(subject_id: int):
             cur.execute("""
                 SELECT DISTINCT m.id, m.title, m.file_name, m.uploaded_at
                 FROM module m
-                INNER JOIN session_module sm ON m.id = sm.module_id
-                INNER JOIN session s ON sm.session_id = s.id
-                INNER JOIN class c ON s.class_id = c.id
-                WHERE c.subject_id = %s
+                INNER JOIN session_module sm ON m.id = sm.id_module
+                INNER JOIN session s ON sm.id_session = s.id
+                INNER JOIN class c ON s.id_class = c.id
+                WHERE c.id_subject = %s
                 ORDER BY m.title ASC
             """, (subject_id,))
             data = cur.fetchall()
