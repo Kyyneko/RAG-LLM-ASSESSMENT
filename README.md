@@ -337,7 +337,6 @@ LLM menghasilkan output terstruktur dengan tag:
 [Source code lengkap sebagai jawaban referensi]
 ```
 
-```
 
 ---
 
@@ -368,4 +367,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <p align="center">
   Made with ❤️ for SI-LAB
 </p>
-```
