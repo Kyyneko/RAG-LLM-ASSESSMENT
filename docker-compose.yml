@@ -2,6 +2,8 @@ services:
   rag-llm:
     build: .
     container_name: rag-llm-assessment
+    env_file:
+      - .env
     ports:
       - "5002:5002"
     environment:
