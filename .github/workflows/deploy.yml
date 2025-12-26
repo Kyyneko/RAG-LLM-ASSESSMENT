@@ -16,7 +16,7 @@ jobs:
         with:
           host: 72.61.215.190
           username: deploy
-          key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           script: |
             cd /opt/RAG-LLM-ASSESSMENT
