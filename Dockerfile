@@ -15,7 +15,10 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install gunicorn gevent
+RUN pip install gunicorn
+
+# Pre-download the embedding model during build
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
 # Copy application code
 COPY . .
@@ -30,5 +33,6 @@ EXPOSE 5002
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=main.py
 
-# Run with gunicorn
-CMD ["gunicorn", "-w", "2", "-k", "gevent", "-b", "0.0.0.0:5002", "--timeout", "300", "--keep-alive", "300", "main:create_app()"]
+# Run with gunicorn (sync workers instead of gevent)
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5002", "--timeout", "300", "--keep-alive", "300", "main:create_app()"]
+
