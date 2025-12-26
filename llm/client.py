@@ -89,8 +89,15 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
                 print(f"[Response] Rate limit tersisa: {response.headers['x-ratelimit-remaining']}")
             
             if response.status_code == 429:
-                wait_time = min(2 ** attempt, 32)
-                print(f"⚠️ Rate limit. Mencoba ulang dalam {wait_time} detik...")
+                # Rate limit - fail faster karena pasti tidak akan berhasil
+                # Tapi tetap beri kesempatan beberapa kali jika rate limit sesaat
+                if attempt >= 5:  # Max 5 retries untuk rate limit
+                    raise RateLimitError(
+                        "Rate limit tercapai. API OpenRouter sedang sibuk. "
+                        "Silakan tunggu beberapa menit dan coba lagi."
+                    )
+                wait_time = min(2 ** attempt, 15)  # Max wait 15 seconds
+                print(f"⚠️ Rate limit. Mencoba ulang dalam {wait_time} detik (attempt {attempt}/5)...")
                 time.sleep(wait_time)
                 continue
             
