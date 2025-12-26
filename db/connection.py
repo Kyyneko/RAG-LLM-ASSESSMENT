@@ -54,7 +54,7 @@ def get_connection():
         "port": int(os.getenv("DB_PORT", "3306")),
         "user": os.getenv("DB_USER", "root"),
         "password": password,
-        "db": os.getenv("DB_DB", "silab_db"),
+        "db": os.getenv("DB_NAME", "silab_db"),
         "charset": "utf8mb4",
         "cursorclass": pymysql.cursors.DictCursor,
         "autocommit": False
