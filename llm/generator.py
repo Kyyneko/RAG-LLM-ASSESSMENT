@@ -177,9 +177,12 @@ def get_curriculum_context(subject_name: str, topic: str) -> str:
     
     for idx, module in enumerate(curriculum):
         module_lower = module.lower()
-        # Check if topic contains module name or vice versa
-        if module_lower in topic_lower or topic_lower in module_lower:
-            matched_modules.append((idx, module))
+        # Check if topic contains module name or vice versa (exact match preferred)
+        if module_lower == topic_lower:
+            # Exact match - highest priority
+            matched_modules.append((idx, module, 2))  # priority 2 = exact
+        elif module_lower in topic_lower or topic_lower in module_lower:
+            matched_modules.append((idx, module, 1))  # priority 1 = substring
         
         # Check for partial match (e.g., "Data Types, Collection" matches "Data Types")
         for part in topic.split(","):
@@ -187,13 +190,20 @@ def get_curriculum_context(subject_name: str, topic: str) -> str:
             # Also handle "&" separator
             for subpart in part.split("&"):
                 subpart = subpart.strip()
-                if subpart and (subpart in module_lower or module_lower in subpart):
-                    matched_modules.append((idx, module))
-    
-    # Take the HIGHEST index among all matches (to include all allowed concepts)
+                # Only match if subpart is substantial (at least 4 chars) and matches well
+                if len(subpart) >= 4 and (subpart == module_lower or module_lower == subpart):
+                    matched_modules.append((idx, module, 2))  # exact part match
+                elif len(subpart) >= 4 and (subpart in module_lower or module_lower in subpart):
+                    # Only add if not already matched and significant overlap
+                    if len(subpart) >= 4 and len(module_lower) >= 4:
+                        matched_modules.append((idx, module, 1))
+    # Take the best match: prioritize by (priority DESC, index for topic position)
     if matched_modules:
-        current_idx = max(idx for idx, _ in matched_modules)
-        print(f"[DEBUG] Matched modules: {[m for _, m in matched_modules]}, using highest: {curriculum[current_idx]}")
+        # Sort by priority (descending), then by index 
+        # For same priority, prefer the match that best fits the topic
+        best_match = max(matched_modules, key=lambda x: (x[2], -abs(curriculum.index(x[1]) - len(curriculum)//2)))
+        current_idx = best_match[0]
+        print(f"[DEBUG] Matched modules: {list(set([m for _, m, _ in matched_modules]))}, using: {curriculum[current_idx]} (priority={best_match[2]})")
     
     if current_idx == -1:
         # Topic not found in curriculum, assume it's a new/combined module
