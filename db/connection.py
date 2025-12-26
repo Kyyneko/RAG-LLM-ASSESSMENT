@@ -47,14 +47,14 @@ def get_connection():
     Returns:
         pymysql.connections.Connection: Objek koneksi database aktif.
     """
-    password = os.getenv("MYSQL_PASSWORD", "") or ""
+    password = os.getenv("DB_PASSWORD", "") or ""
 
     connection_params = {
-        "host": os.getenv("MYSQL_HOST", "localhost"),
-        "port": int(os.getenv("MYSQL_PORT", "3306")),
-        "user": os.getenv("MYSQL_USER", "root"),
+        "host": os.getenv("DB_HOST", "localhost"),
+        "port": int(os.getenv("DB_PORT", "3306")),
+        "user": os.getenv("DB_USER", "root"),
         "password": password,
-        "db": os.getenv("MYSQL_DB", "silab_db"),
+        "db": os.getenv("DB_DB", "silab_db"),
         "charset": "utf8mb4",
         "cursorclass": pymysql.cursors.DictCursor,
         "autocommit": False
