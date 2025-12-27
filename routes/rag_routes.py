@@ -169,7 +169,6 @@ def generate_assessment():
         print(f"✓ Module ditemukan: {module_title} (ID: {module_id})")
 
         topic = module_title
-        class_name = "Generated"
         
         # Run RAG pipeline with caching
         print("[Langkah 3] Menjalankan pipeline indexing (dengan cache)...")
@@ -241,7 +240,6 @@ def generate_assessment():
             subject_id=subject_id,
             session_id=0,
             topic=topic,
-            class_name=class_name,
             subject_name=subject_name,
             assistant_id=assistant_id,
             context_snippets=context_snippets,

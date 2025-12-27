@@ -44,3 +44,5 @@ analyze_comments.py
 analyze_stats.py
 test_generate.py
 dump-silab_db-202512260142.sql
+analyze_assessments_bab3.py
+analysis_output.txt

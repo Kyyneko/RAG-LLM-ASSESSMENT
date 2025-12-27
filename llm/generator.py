@@ -283,7 +283,6 @@ def get_subject_config(subject_name: str) -> dict:
 def generate_assessment_description(
     subject_name: str,
     topic: str,
-    class_name: str,
     context_snippets: list,
     module_names: list[str] = None,
     custom_notes: str = None,
@@ -305,7 +304,6 @@ def generate_assessment_description(
     Args:
         subject_name (str): Nama mata kuliah
         topic (str): Topik materi
-        class_name (str): Nama kelas
         context_snippets (list): Konteks materi
         module_names (list): Nama modul
         custom_notes (str): Catatan khusus
@@ -320,7 +318,6 @@ def generate_assessment_description(
     print("\n[DEBUG] Menghasilkan assessment...")
     print(f"[DEBUG] Subject : {subject_name}")
     print(f"[DEBUG] Topik   : {topic}")
-    print(f"[DEBUG] Kelas   : {class_name}")
     print(f"[DEBUG] Konteks : {len(context_snippets) if context_snippets else 0}")
     if custom_notes:
         print(f"[DEBUG] Catatan khusus: {custom_notes[:100]}...")
@@ -329,8 +326,6 @@ def generate_assessment_description(
         raise ValueError("subject_name tidak boleh kosong!")
     if not topic.strip():
         raise ValueError("topic tidak boleh kosong!")
-    if not class_name.strip():
-        raise ValueError("class_name tidak boleh kosong!")
 
     config = get_subject_config(subject_name)
     language = config["language"]
@@ -444,13 +439,12 @@ ATURAN KONTEN:
     if curriculum_context:
         print(f"[DEBUG] Curriculum context generated for: {topic}")
     
-    user_instruction = f"""
+    user_instruction = f\"\"\"
 === PARAMETER WAJIB DIPERTIMBANGKAN ===
 
 📚 MATA KULIAH: {subject_name}
 📝 TOPIK UTAMA: {topic}
 🎯 TINGKAT KESULITAN: {difficulty.upper()}
-👥 KELAS: {class_name}
 💻 BAHASA: {language}
 
 {curriculum_context}

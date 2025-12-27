@@ -53,7 +53,6 @@ def preview_rag_generated_assessment(
     subject_id: int,
     session_id: int,
     topic: str,
-    class_name: str,
     subject_name: str,
     assistant_id: int,
     context_snippets: list,
@@ -72,7 +71,6 @@ def preview_rag_generated_assessment(
     print("=" * 60)
     print(f"Subject: {subject_name} (ID: {subject_id})")
     print(f"Session: {topic} (ID: {session_id})")
-    print(f"Kelas: {class_name}")
     print(f"Context chunks: {len(context_snippets)}")
     if custom_notes:
         print(f"Catatan khusus: {custom_notes}")
@@ -82,7 +80,6 @@ def preview_rag_generated_assessment(
     raw_output = generate_assessment_description(
         subject_name=subject_name,
         topic=topic,
-        class_name=class_name,
         context_snippets=context_snippets,
         custom_notes=custom_notes,
         assessment_task_id=None,
@@ -103,7 +100,6 @@ def preview_rag_generated_assessment(
         "session_id": session_id,
         "assistant_id": assistant_id,
         "topic": topic,
-        "class_name": class_name,
         "subject_name": subject_name,
         "context_count": len(context_snippets),
         "generated_at": datetime.now().isoformat(),
@@ -271,7 +267,6 @@ def create_rag_generated_task(
     subject_id: int,
     session_id: int,
     topic: str,
-    class_name: str,
     subject_name: str,
     assistant_id: int,
     context_snippets: list,
@@ -293,7 +288,6 @@ def create_rag_generated_task(
     print("=" * 60)
     print(f"Subject: {subject_name} (ID: {subject_id})")
     print(f"Session: {topic} (ID: {session_id})")
-    print(f"Kelas: {class_name}")
     print(f"Context chunks: {len(context_snippets)}")
     if custom_notes:
         print(f"Catatan khusus: {custom_notes}")
@@ -305,7 +299,6 @@ def create_rag_generated_task(
     raw_output = generate_assessment_description(
         subject_name=subject_name,
         topic=topic,
-        class_name=class_name,
         context_snippets=context_snippets,
         custom_notes=custom_notes,
         assessment_task_id=existing_task_id,
@@ -329,7 +322,6 @@ def create_rag_generated_task(
     generation_metadata = {
         "session_id": session_id,
         "topic": topic,
-        "class_name": class_name,
         "context_count": len(context_snippets),
         "generated_at": datetime.now().isoformat(),
         "model": "openai/gpt-oss-120b:free",
