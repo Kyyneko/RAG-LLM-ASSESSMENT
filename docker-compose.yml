@@ -15,6 +15,8 @@ services:
       - ./data:/app/data
       - ./Modul-Modul-Lab-SI:/app/Modul-Modul-Lab-SI
       - ~/.cache/huggingface:/root/.cache/huggingface
+      # Mount SILAB-BE modules folder so container can access module files
+      - /var/www/SILAB-BE/app/uploads/modules:/var/www/SILAB-BE/app/uploads/modules:ro
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5002/" ]
