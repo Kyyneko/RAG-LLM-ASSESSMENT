@@ -48,7 +48,12 @@ def get_or_build_vectorstore(module_id: int, file_path: str, embedder: Embedder)
         try:
             logger.info(f"Loading cached vector store for module {module_id}")
             vectorstore = VectorStore.load_from_disk(index_path, data_path)
-            return vectorstore
+            # Check if cache is NOT empty - if empty, rebuild
+            if vectorstore.index is not None and vectorstore.index.ntotal > 0:
+                logger.info(f"Cache loaded with {vectorstore.index.ntotal} vectors")
+                return vectorstore
+            else:
+                logger.warning(f"Cache exists but is empty (0 chunks), rebuilding...")
         except Exception as e:
             logger.warning(f"Failed to load cache: {e}, rebuilding...")
     
