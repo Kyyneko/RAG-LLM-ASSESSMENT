@@ -439,7 +439,7 @@ ATURAN KONTEN:
     if curriculum_context:
         print(f"[DEBUG] Curriculum context generated for: {topic}")
     
-    user_instruction = f\"\"\"
+    user_instruction = f"""
 === PARAMETER WAJIB DIPERTIMBANGKAN ===
 
 📚 MATA KULIAH: {subject_name}
