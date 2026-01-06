@@ -13,7 +13,7 @@ except ImportError:
 class CrossEncoderReranker:
     """CrossEncoder reranker untuk meningkatkan presisi retrieval."""
 
-    def __init__(self, model_name: str = "ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_name: str = "cross-encoder/ms-marco-TinyBERT-L-2-v2"):
         """
         Inisialisasi CrossEncoder reranker.
 

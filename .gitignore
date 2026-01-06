@@ -14,7 +14,7 @@ env/
 # Upload folder
 upload/
 *.pdf
-*.docx
+# *.docx
 
 
 # IDE
