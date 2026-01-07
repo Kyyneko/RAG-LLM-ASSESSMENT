@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 from routes.rag_routes import rag_bp
 
 
@@ -16,10 +16,16 @@ def create_app() -> Flask:
  
     @app.route("/")
     def home():
-        """Endpoint utama untuk memverifikasi status API."""
+        """Landing page dengan tampilan yang cantik."""
+        return render_template("index.html")
+    
+    @app.route("/api")
+    def api_info():
+        """Endpoint untuk memverifikasi status API (JSON response)."""
         return jsonify({
             "message": "SI-LAB RAG Assessment Generator API is running.",
             "version": "2.0",
+            "status": "online",
             "endpoints": {
                 "generate": "/api/rag/generate",
                 "subjects": "/api/rag/subjects",

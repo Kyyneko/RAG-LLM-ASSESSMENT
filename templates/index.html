@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SI-LAB RAG Assessment Generator API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+            min-height: 100vh;
+            color: #e4e4f0;
+            overflow-x: hidden;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-orb.purple {
+            background: #8b5cf6;
+            top: -200px;
+            right: -200px;
+        }
+
+        .glow-orb.blue {
+            background: #3b82f6;
+            bottom: -200px;
+            left: -200px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 0.875rem;
+            color: #4ade80;
+            margin-top: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .version {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: #a5b4fc;
+            margin-left: 12px;
+        }
+
+        .cards-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(30, 30, 60, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 20px;
+            padding: 28px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .card-icon.generate { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .card-icon.subjects { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .card-icon.modules { background: linear-gradient(135deg, #10b981, #059669); }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .card-description {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .endpoint-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .method-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .method-badge.post { background: #f59e0b; color: #000; }
+        .method-badge.get { background: #3b82f6; color: #fff; }
+
+        .endpoint-path {
+            color: #e4e4f0;
+        }
+
+        .tech-stack {
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        .tech-title {
+            font-size: 0.875rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+
+        .tech-icons {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+
+        .tech-item span {
+            font-size: 2rem;
+        }
+
+        footer {
+            margin-top: 60px;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        footer a {
+            color: #8b5cf6;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            h1 { font-size: 1.75rem; }
+            .container { padding: 40px 16px; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="glow-orb purple"></div>
+    <div class="glow-orb blue"></div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🤖</div>
+            </div>
+            <h1>SI-LAB RAG Assessment Generator</h1>
+            <p class="subtitle">API untuk generate soal praktikum otomatis menggunakan RAG & LLM</p>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                API Running
+                <span class="version">v2.0</span>
+            </div>
+        </header>
+
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon generate">⚡</div>
+                    <h2 class="card-title">Generate Assessment</h2>
+                </div>
+                <p class="card-description">
+                    Generate soal praktikum otomatis berdasarkan modul dan tingkat kesulitan. 
+                    Menggunakan RAG untuk mengambil konteks relevan dari materi modul.
+                </p>
+                <div class="endpoint-box">
+                    <span class="method-badge post">POST</span>
+                    <span class="endpoint-path">/api/rag/generate</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon subjects">📚</div>
+                    <h2 class="card-title">Get Subjects</h2>
+                </div>
+                <p class="card-description">
+                    Mengambil daftar semua mata kuliah (subject) yang tersedia di sistem untuk pilihan dropdown.
+                </p>
+                <div class="endpoint-box">
+                    <span class="method-badge get">GET</span>
+                    <span class="endpoint-path">/api/rag/subjects</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon modules">📄</div>
+                    <h2 class="card-title">Get Modules by Subject</h2>
+                </div>
+                <p class="card-description">
+                    Mengambil daftar modul praktikum berdasarkan subject yang dipilih.
+                </p>
+                <div class="endpoint-box">
+                    <span class="method-badge get">GET</span>
+                    <span class="endpoint-path">/api/rag/subjects/{subject_id}/modules</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tech-stack">
+            <p class="tech-title">Powered By</p>
+            <div class="tech-icons">
+                <div class="tech-item">
+                    <span>🐍</span>
+                    <p>Python</p>
+                </div>
+                <div class="tech-item">
+                    <span>🌶️</span>
+                    <p>Flask</p>
+                </div>
+                <div class="tech-item">
+                    <span>🦙</span>
+                    <p>LLaMA 3.3</p>
+                </div>
+                <div class="tech-item">
+                    <span>🔍</span>
+                    <p>FAISS</p>
+                </div>
+                <div class="tech-item">
+                    <span>🐳</span>
+                    <p>Docker</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2026 SI-LAB Assessment Generator | <a href="https://github.com/Kyyneko/RAG-LLM-ASSESSMENT" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+</body>
+</html>
