@@ -22,10 +22,8 @@ def create_app() -> Flask:
             "version": "2.0",
             "endpoints": {
                 "generate": "/api/rag/generate",
-                "upload_module": "/api/rag/upload-module",
-                "generation_history": "/api/rag/generation-history/<subject_id>",
-                "preview_mode": "/api/rag/preview",
-                "health_check": "/api/rag/health"
+                "subjects": "/api/rag/subjects",
+                "modules_by_subject": "/api/rag/subjects/<subject_id>/modules"
             }
         })
 
