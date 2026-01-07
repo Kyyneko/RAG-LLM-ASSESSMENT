@@ -18,6 +18,7 @@ jobs:
           username: root
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
+          timeout: 120s
           command_timeout: 5m
           script: |
             cd /opt/RAG-LLM-ASSESSMENT
