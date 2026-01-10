@@ -361,6 +361,7 @@ def generate_assessment():
 
 
 @rag_bp.route("/subjects", methods=["GET"])
+@require_api_key
 def get_subjects():
     """Mengambil semua subject untuk dropdown/seleksi (untuk Streamlit demo)."""
     conn = None
@@ -396,6 +397,7 @@ def get_subjects():
 
 
 @rag_bp.route("/subjects/<int:subject_id>/modules", methods=["GET"])
+@require_api_key
 def get_modules_by_subject(subject_id: int):
     """
     Mengambil semua module untuk subject tertentu (untuk Streamlit demo).
