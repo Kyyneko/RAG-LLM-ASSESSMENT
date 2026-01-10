@@ -3,6 +3,7 @@ import traceback
 import sys
 import time
 import os
+from functools import wraps
 from flask import Blueprint, request, jsonify
 from db.connection import get_connection
 from rag.pipeline import process_files
@@ -22,6 +23,64 @@ logger = logging.getLogger(__name__)
 # Cache directory for vector stores
 VECTORSTORE_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "vectorstore")
 os.makedirs(VECTORSTORE_CACHE_DIR, exist_ok=True)
+
+# ============================================================
+# API SECURITY: Rate Limiting Storage
+# ============================================================
+request_counts = {}  # {api_key: [timestamp1, timestamp2, ...]}
+
+def require_api_key(f):
+    """
+    Decorator untuk validasi API Key dan Rate Limiting.
+    - Cek header X-API-Key
+    - Batasi request per menit sesuai RATE_LIMIT_PER_MINUTE
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key")
+        valid_keys = os.getenv("API_KEYS", "").split(",")
+        valid_keys = [k.strip() for k in valid_keys if k.strip()]
+        
+        # Step 1: Validasi API Key
+        if not api_key:
+            logger.warning("Request tanpa API Key")
+            return jsonify({"error": "API Key required. Add 'X-API-Key' header."}), 401
+        
+        if api_key not in valid_keys:
+            logger.warning(f"API Key tidak valid: {api_key[:10]}...")
+            return jsonify({"error": "Invalid API Key"}), 401
+        
+        # Step 2: Rate Limit Check
+        limit = int(os.getenv("RATE_LIMIT_PER_MINUTE", 10))
+        current_time = time.time()
+        window_seconds = 60
+        
+        if api_key not in request_counts:
+            request_counts[api_key] = []
+        
+        # Hapus request lama (> 60 detik)
+        request_counts[api_key] = [
+            t for t in request_counts[api_key] 
+            if current_time - t < window_seconds
+        ]
+        
+        # Cek limit
+        if len(request_counts[api_key]) >= limit:
+            logger.warning(f"Rate limit exceeded untuk key: {api_key[:10]}...")
+            return jsonify({
+                "error": "Rate limit exceeded",
+                "limit": limit,
+                "retry_after_seconds": 60
+            }), 429
+        
+        # Step 3: Increment counter
+        request_counts[api_key].append(current_time)
+        logger.debug(f"Request {len(request_counts[api_key])}/{limit} untuk key: {api_key[:10]}...")
+        
+        # Step 4: Process request
+        return f(*args, **kwargs)
+    
+    return decorated
 
 def get_cache_paths(module_id: int) -> tuple:
     """Get cache file paths for a specific module."""
@@ -72,6 +131,7 @@ def get_or_build_vectorstore(module_id: int, file_path: str, embedder: Embedder)
 
 
 @rag_bp.route("/generate", methods=["POST"])
+@require_api_key
 def generate_assessment():
     """
     Generate assessment task dengan RAG dan LLM (Preview Only Mode).
