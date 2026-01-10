@@ -1,9 +1,12 @@
 import os
 import time
+import logging
 from .extractor import extract_text
 from .chunker import create_chunks
 from .embedder import Embedder
 from .vectorstore import VectorStore
+
+logger = logging.getLogger(__name__)
 
 def process_files(file_paths: list[str], embedder: Embedder = None, 
                   subject_id: int = None) -> VectorStore:
@@ -25,36 +28,33 @@ def process_files(file_paths: list[str], embedder: Embedder = None,
     total_files = len(file_paths)
     total_chunks = 0
     
-    print("=" * 60)
-    print("RAG INDEXING PIPELINE")
-    print("=" * 60)
-    print(f"Total file yang akan diproses: {total_files}\n")
+    logger.info(f"Starting RAG indexing pipeline for {total_files} files")
     
     for idx, file_path in enumerate(file_paths, 1):
         if not os.path.exists(file_path):
-            print(f"[{idx}/{total_files}] File tidak ditemukan: {file_path}")
+            logger.warning(f"[{idx}/{total_files}] File not found: {file_path}")
             continue
         
         filename = os.path.basename(file_path)
-        print(f"[{idx}/{total_files}] Memproses file: {filename}")
+        logger.info(f"[{idx}/{total_files}] Processing file: {filename}")
         
-        print("  - Mengekstrak teks...")
+        logger.debug("  Extracting text...")
         text = extract_text(file_path)
         
         if not text or not text.strip():
-            print("  - Tidak ada teks yang berhasil diekstrak, dilewati.\n")
+            logger.warning("  No text extracted, skipping")
             continue
         
-        print(f"  - Teks berhasil diekstrak ({len(text)} karakter)")
+        logger.debug(f"  Text extracted ({len(text)} characters)")
         
-        print("  - Membuat potongan teks (chunks) dengan semantic splitting...")
+        logger.debug("  Creating chunks with semantic splitting...")
         chunks = list(create_chunks(text, max_chars=1000, overlap=200))
         
         if not chunks:
-            print("  - Tidak ada chunk yang dihasilkan, dilewati.\n")
+            logger.warning("  No chunks generated, skipping")
             continue
         
-        print(f"  - Total chunk dibuat: {len(chunks)}")
+        logger.debug(f"  Total chunks created: {len(chunks)}")
         
         metadata = [{
             "source": filename,
@@ -64,21 +64,17 @@ def process_files(file_paths: list[str], embedder: Embedder = None,
             "total_chunks": len(chunks)
         } for i in range(len(chunks))]
         
-        print("  - Menghasilkan embedding...")
+        logger.debug("  Generating embeddings...")
         embeddings = embedder.encode(chunks)
         
-        print("  - Menambahkan ke vector store...")
+        logger.debug("  Adding to vector store...")
         vectorstore.add(embeddings, chunks, metadata)
         
         total_chunks += len(chunks)
-        print("  - Proses selesai untuk file ini.\n")
+        logger.debug("  File processing completed")
     
-    print("=" * 60)
-    print("INDEXING SELESAI")
-    print(f" • Jumlah file diproses: {total_files}")
-    print(f" • Total chunk terindeks: {total_chunks}")
-    print(f" • Statistik VectorStore: {vectorstore.get_stats()}")
-    print("=" * 60)
+    logger.info(f"Indexing completed: {total_files} files, {total_chunks} chunks indexed")
+    logger.debug(f"VectorStore stats: {vectorstore.get_stats()}")
     
     return vectorstore
 
@@ -118,7 +114,7 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
             new_docs_count = result['new_docs'] if result else 0
             
             if new_docs_count == 0:
-                print(f"✓ Menggunakan cached vector store untuk subject {subject_id}")
+                logger.info(f"Using cached vector store for subject {subject_id}")
                 conn.close()
                 
                 try:
@@ -131,18 +127,18 @@ def build_vectorstore_for_subject(subject_id: int, use_cache: bool = True):
                     }
                     return vectorstore, metadata
                 except Exception as e:
-                    print(f"⚠️ Cache loading gagal: {e}. Membangun ulang...")
+                    logger.warning(f"Cache loading failed: {e}. Rebuilding...")
         
         conn.close()
     
-    print(f"⚙️ Membangun ulang vector store untuk subject {subject_id}")
+    logger.info(f"Building vector store for subject {subject_id}")
     vectorstore, metadata = _build_vectorstore_from_db(subject_id)
     
     try:
         vectorstore.save_to_disk(index_path, data_path)
         metadata["cached"] = True
     except Exception as e:
-        print(f"⚠️ Gagal menyimpan cache: {e}")
+        logger.warning(f"Failed to save cache: {e}")
         metadata["cached"] = False
     
     return vectorstore, metadata
@@ -183,10 +179,10 @@ def _build_vectorstore_from_db(subject_id: int):
             docs = cur.fetchall()
             
             if not docs:
-                print(f"ℹ️ Tidak ada dokumen baru untuk subject_id={subject_id}")
+                logger.info(f"No new documents for subject_id={subject_id}")
                 return vectorstore, metadata
             
-            print(f"📄 Ditemukan {len(docs)} dokumen untuk diindeks")
+            logger.info(f"Found {len(docs)} documents to index")
             
             for doc in docs:
                 doc_id = doc["id"]
@@ -194,11 +190,11 @@ def _build_vectorstore_from_db(subject_id: int):
                 file_name = doc["file_name"]
                 
                 if not os.path.exists(file_path):
-                    print(f"⚠️ File tidak ditemukan: {file_path}")
+                    logger.warning(f"File not found: {file_path}")
                     metadata["failed_files"].append(file_name)
                     continue
                 
-                print(f"  Memproses: {file_name}")
+                logger.debug(f"  Processing: {file_name}")
                 
                 text = extract_text(file_path)
                 if not text:
@@ -231,10 +227,10 @@ def _build_vectorstore_from_db(subject_id: int):
                 """, (doc_id,))
                 
                 conn.commit()
-                print(f"  ✓ {len(chunks)} chunks terindeks")
+                logger.debug(f"  {len(chunks)} chunks indexed")
         
     except Exception as e:
-        print(f"✗ Kesalahan dalam build_vectorstore_for_subject: {str(e)}")
+        logger.error(f"Error in build_vectorstore_for_subject: {str(e)}")
         conn.rollback()
         raise e
     finally:

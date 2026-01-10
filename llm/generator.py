@@ -203,7 +203,7 @@ def get_curriculum_context(subject_name: str, topic: str) -> str:
         # For same priority, prefer the match that best fits the topic
         best_match = max(matched_modules, key=lambda x: (x[2], -abs(curriculum.index(x[1]) - len(curriculum)//2)))
         current_idx = best_match[0]
-        print(f"[DEBUG] Matched modules: {list(set([m for _, m, _ in matched_modules]))}, using: {curriculum[current_idx]} (priority={best_match[2]})")
+        logger.debug(f"Matched modules: {list(set([m for _, m, _ in matched_modules]))}, using: {curriculum[current_idx]} (priority={best_match[2]})")
     
     if current_idx == -1:
         # Topic not found in curriculum, assume it's a new/combined module
@@ -315,12 +315,12 @@ def generate_assessment_description(
         str: Deskripsi soal ber-tag (#SOAL, #REQUIREMENTS, #EXPECTED OUTPUT, #KUNCI JAWABAN)
     """
 
-    print("\n[DEBUG] Menghasilkan assessment...")
-    print(f"[DEBUG] Subject : {subject_name}")
-    print(f"[DEBUG] Topik   : {topic}")
-    print(f"[DEBUG] Konteks : {len(context_snippets) if context_snippets else 0}")
+    logger.debug("Generating assessment...")
+    logger.debug(f"Subject: {subject_name}")
+    logger.debug(f"Topic: {topic}")
+    logger.debug(f"Context: {len(context_snippets) if context_snippets else 0}")
     if custom_notes:
-        print(f"[DEBUG] Catatan khusus: {custom_notes[:100]}...")
+        logger.debug(f"Custom notes: {custom_notes[:100]}...")
 
     if not subject_name.strip():
         raise ValueError("subject_name tidak boleh kosong!")
@@ -334,8 +334,8 @@ def generate_assessment_description(
     code_style = config["code_style"]
     output_type = config["output_type"]
 
-    print(f"[DEBUG] Bahasa terdeteksi: {language}")
-    print(f"[DEBUG] Area fokus: {focus}")
+    logger.debug(f"Language detected: {language}")
+    logger.debug(f"Focus area: {focus}")
 
     normalized_snippets = []
     if context_snippets:
@@ -347,7 +347,7 @@ def generate_assessment_description(
             elif isinstance(item, str) and item.strip():
                 normalized_snippets.append(item.strip())
 
-        print(f"[DEBUG] {len(normalized_snippets)} snippets dinormalisasi")
+        logger.debug(f"{len(normalized_snippets)} snippets normalized")
 
     if normalized_snippets:
         if module_names:
@@ -368,9 +368,9 @@ def generate_assessment_description(
             context_parts.append(f"[Konteks {i}]\n{snippet}")
 
         context_text = f"{module_info}\n\n" + "\n\n".join(context_parts)
-        print(f"[DEBUG] Panjang konteks: {len(context_text)} karakter")
+        logger.debug(f"Context length: {len(context_text)} characters")
     else:
-        print("⚠️ Tidak ada konteks!")
+        logger.warning("No context available!")
         context_text = f"(Tidak ada konteks, buat soal umum tentang {concepts})"
 
     system_message = {
@@ -432,12 +432,12 @@ ATURAN KONTEN:
 
     # Normalisasi difficulty
     difficulty_level = difficulty.lower() if difficulty else "sedang"
-    print(f"[DEBUG] Difficulty: {difficulty_level}")
+    logger.debug(f"Difficulty: {difficulty_level}")
     
     # Generate curriculum context
     curriculum_context = get_curriculum_context(subject_name, topic)
     if curriculum_context:
-        print(f"[DEBUG] Curriculum context generated for: {topic}")
+        logger.debug(f"Curriculum context generated for: {topic}")
     
     user_instruction = f"""
 === PARAMETER WAJIB DIPERTIMBANGKAN ===
@@ -629,11 +629,11 @@ Pastikan soal sudah SESUAI dengan catatan tersebut!
     messages = [system_message, user_message]
 
     total_len = len(system_message["content"]) + len(user_message["content"])
-    print(f"\n[DEBUG] Panjang prompt: {total_len} karakter (~{total_len // 4} tokens)")
+    logger.debug(f"Prompt length: {total_len} characters (~{total_len // 4} tokens)")
     if total_len < 100:
         raise ValueError(f"Prompt terlalu pendek ({total_len} karakter)!")
 
-    print(f"\n[DEBUG] Memanggil LLM untuk {language}...")
+    logger.info(f"Calling LLM for {language}...")
     llm_start_time = time.time()
 
     try:
@@ -643,16 +643,16 @@ Pastikan soal sudah SESUAI dengan catatan tersebut!
         if not result or not result.strip():
             raise Exception("LLM mengembalikan response kosong.")
 
-        print(f"\n[DEBUG] Response: {len(result)} karakter")
-        print(f"Preview: {result[:150]}...")
+        logger.debug(f"Response: {len(result)} characters")
+        logger.debug(f"Preview: {result[:150]}...")
 
         required_tags = ["**SOAL:", "**REQUIREMENTS:", "**EXPECTED OUTPUT:", "**KUNCI JAWABAN:"]
         missing = [t for t in required_tags if t not in result]
 
         if missing:
-            print(f"⚠️ Tag tidak lengkap: {', '.join(missing)}")
+            logger.warning(f"Missing tags: {', '.join(missing)}")
         else:
-            print("✓ Semua tag yang diperlukan ada")
+            logger.info("All required tags present")
 
         return result
 

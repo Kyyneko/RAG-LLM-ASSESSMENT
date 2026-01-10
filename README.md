@@ -108,7 +108,7 @@ Proyek ini adalah backend API yang mengotomatisasi pembuatan soal assessment pra
 
 ### LLM Integration
 - **OpenRouter API** - Gateway ke berbagai model LLM
-- **Default Model**: Google Gemma 3 27B Instruct (free tier)
+- **Default Model**: `openai/gpt-oss-120b:free` (GPT-OSS 120B)
 
 ---
 
@@ -148,9 +148,12 @@ RAG-LLM-ASSESSMENT/
 │   ├── retriever.py       # Context retrieval + reranking
 │   └── pipeline.py        # End-to-end RAG orchestration
 │
-└── routes/                # API endpoints
-    ├── __init__.py
-    └── rag_routes.py      # /api/rag/* endpoints
+├── routes/                # API endpoints
+│   ├── __init__.py
+│   └── rag_routes.py      # /api/rag/* endpoints
+│
+└── templates/             # HTML templates
+    └── index.html         # API documentation page
 ```
 
 ---
@@ -168,7 +171,7 @@ RAG-LLM-ASSESSMENT/
 
 1. **Clone repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/Kyyneko/RAG-LLM-ASSESSMENT.git
 cd RAG-LLM-ASSESSMENT
 ```
 
@@ -190,7 +193,7 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DB=silab_db
 OPENROUTER_API_KEY=your-openrouter-api-key
-LLM_MODEL=google/gemma-3-27b-it:free
+LLM_MODEL=openai/gpt-oss-120b:free
 HUGGINGFACE_HUB_TOKEN=your-hf-token  # opsional
 ```
 
@@ -236,7 +239,7 @@ MYSQL_DB=silab_db
 
 # LLM API
 OPENROUTER_API_KEY=your-key-here
-LLM_MODEL=google/gemma-3-27b-it:free
+LLM_MODEL=openai/gpt-oss-120b:free
 
 # Hugging Face (optional)
 HUGGINGFACE_HUB_TOKEN=your-hf-token
@@ -289,7 +292,7 @@ Generate soal assessment berdasarkan modul dan tingkat kesulitan.
       "subject_id": 1,
       "topic": "Array dan Looping",
       "generated_at": "2024-01-01T10:00:00",
-      "model": "google/gemma-3-27b-it:free"
+      "model": "openai/gpt-oss-120b:free"
     },
     "estimated_time": "60-90 menit"
   },
@@ -480,21 +483,21 @@ Contoh: Jika modul saat ini adalah "Looping", soal BOLEH menggunakan "Data Types
 LLM menghasilkan output terstruktur dengan 4 bagian:
 
 ```markdown
-#SOAL
+**SOAL:**
 [Judul Menarik]
 
 [CERITA: Nama tokoh + tempat + situasi + kondisi bisnis/logika]
 [Lalu perintah untuk membuat program]
 
-#REQUIREMENTS
+**REQUIREMENTS:**
 1. [Requirement berdasarkan cerita]
 2. [Requirement berdasarkan cerita]
 ...
 
-#EXPECTED OUTPUT
+**EXPECTED OUTPUT:**
 [Contoh interaksi lengkap]
 
-#KUNCI JAWABAN
+**KUNCI JAWABAN:**
 ```python
 [Kode lengkap]
 ```
@@ -535,6 +538,12 @@ Expected response:
   "endpoints": {...}
 }
 ```
+
+### GitHub Actions Deployment
+
+Proyek ini menggunakan GitHub Actions untuk deployment otomatis ke VPS. Konfigurasi ada di `.github/workflows/deploy.yml`.
+
+**Trigger**: Push ke branch `main`
 
 ---
 
@@ -604,6 +613,20 @@ CURRICULUM_ORDER = {
 
 ---
 
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| 🐍 **Python 3.11+** | Backend language |
+| 🌶️ **Flask** | Web framework |
+| 🤖 **GPT-OSS 120B** | Large Language Model (via OpenRouter) |
+| 🔍 **FAISS** | Vector similarity search |
+| 🔄 **CrossEncoder** | Reranking untuk presisi tinggi |
+| 🐳 **Docker** | Containerization |
+| 🐬 **MySQL** | Database |
+
+---
+
 ## License
 
 Proyek ini adalah bagian dari Skripsi Mahasiswa - Universitas Hasanuddin
@@ -615,9 +638,10 @@ Proyek ini adalah bagian dari Skripsi Mahasiswa - Universitas Hasanuddin
 **Mahendra** - Skripsi Project
 
 - GitHub: [@Kyyneko](https://github.com/Kyyneko)
+- Repository: [RAG-LLM-ASSESSMENT](https://github.com/Kyyneko/RAG-LLM-ASSESSMENT)
 
 ---
 
 <p align="center">
-  Made with ❤️ for SI-LAB
+  Made with ❤️ for SI-LAB UNHAS
 </p>

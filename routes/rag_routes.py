@@ -130,7 +130,7 @@ def generate_assessment():
         cursor = conn.cursor()
 
         # Get subject info
-        print(f"\n[Langkah 1] Mencari subject dengan ID: {subject_id}")
+        logger.debug(f"Step 1: Finding subject with ID: {subject_id}")
         cursor.execute("""
             SELECT id, name, description
             FROM subject
@@ -146,10 +146,10 @@ def generate_assessment():
             }), 404
 
         subject_name = subject_row["name"]
-        print(f"✓ Subject ditemukan: {subject_name} (ID: {subject_id})")
+        logger.debug(f"Subject found: {subject_name} (ID: {subject_id})")
         
         # Get module info
-        print(f"[Langkah 2] Mencari module dengan ID: {module_id}")
+        logger.debug(f"Step 2: Finding module with ID: {module_id}")
         cursor.execute("""
             SELECT id, title, file_path, file_name
             FROM module
@@ -166,16 +166,16 @@ def generate_assessment():
 
         module_title = module_row["title"]
         file_path = module_row["file_path"]
-        print(f"✓ Module ditemukan: {module_title} (ID: {module_id})")
+        logger.debug(f"Module found: {module_title} (ID: {module_id})")
 
         topic = module_title
         
         # Run RAG pipeline with caching
-        print("[Langkah 3] Menjalankan pipeline indexing (dengan cache)...")
+        logger.debug("Step 3: Running indexing pipeline (with cache)...")
         embedder = Embedder()
         vectorstore = get_or_build_vectorstore(module_id, file_path, embedder)
         
-        print("[Langkah 4] Melakukan retrieval konteks...")
+        logger.debug("Step 4: Performing context retrieval...")
 
         # Query berbeda berdasarkan tingkat kesulitan - LEBIH DINAMIS SESUAI TOPIK
         difficulty_lower = tingkat_kesulitan.lower()
@@ -231,10 +231,10 @@ def generate_assessment():
         combined_notes = "\n".join(custom_notes_parts)
 
         # Generate assessment (preview only - no save)
-        print(f"[Langkah 5] Menghasilkan assessment (preview mode)...")
-        print(f"  - Tingkat kesulitan: {tingkat_kesulitan}")
+        logger.info(f"Step 5: Generating assessment (preview mode)...")
+        logger.debug(f"  Difficulty: {tingkat_kesulitan}")
         if notes:
-            print(f"  - Catatan khusus: {notes}")
+            logger.debug(f"  Custom notes: {notes}")
 
         result = preview_rag_generated_assessment(
             subject_id=subject_id,
@@ -271,13 +271,8 @@ def generate_assessment():
         
         exc_type, exc_value, exc_traceback = sys.exc_info()
         
-        print(f"\n{'='*60}")
-        print(f"[ERROR] Terjadi exception")
-        print(f"Tipe: {exc_type.__name__ if exc_type else 'Unknown'}")
-        print(f"Nilai: {exc_value if exc_value else 'Unknown'}")
-        print(f"\nTraceback Lengkap:")
-        traceback.print_exception(exc_type, exc_value, exc_traceback)
-        print(f"{'='*60}\n")
+        logger.error(f"Exception occurred: {exc_type.__name__ if exc_type else 'Unknown'}")
+        logger.error(f"Value: {exc_value if exc_value else 'Unknown'}")
         
         logger.error(f"Error menghasilkan assessment: {exc_value}", exc_info=True)
         

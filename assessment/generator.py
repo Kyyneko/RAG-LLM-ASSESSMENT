@@ -1,7 +1,10 @@
 import json
+import logging
 from datetime import datetime
 from db.connection import get_connection
 from llm.generator import generate_assessment_description
+
+logger = logging.getLogger(__name__)
 
 
 def extract_text_from_context(context):
@@ -66,17 +69,14 @@ def preview_rag_generated_assessment(
     Returns:
         dict: Assessment data yang bisa ditampilkan di FE
     """
-    print("=" * 60)
-    print(f"MENGHASILKAN PREVIEW ASSESSMENT")
-    print("=" * 60)
-    print(f"Subject: {subject_name} (ID: {subject_id})")
-    print(f"Session: {topic} (ID: {session_id})")
-    print(f"Context chunks: {len(context_snippets)}")
+    logger.info(f"Generating assessment preview for {subject_name}")
+    logger.debug(f"Subject: {subject_name} (ID: {subject_id})")
+    logger.debug(f"Session: {topic} (ID: {session_id})")
+    logger.debug(f"Context chunks: {len(context_snippets)}")
     if custom_notes:
-        print(f"Catatan khusus: {custom_notes}")
-    print("=" * 60)
+        logger.debug(f"Custom notes: {custom_notes}")
 
-    print("\nMemanggil LLM untuk menghasilkan assessment...")
+    logger.info("Calling LLM to generate assessment...")
     raw_output = generate_assessment_description(
         subject_name=subject_name,
         topic=topic,
@@ -91,7 +91,7 @@ def preview_rag_generated_assessment(
     if not raw_output or not raw_output.strip():
         raise Exception("LLM tidak mengembalikan output")
 
-    print(f"✓ LLM generation selesai ({len(raw_output)} karakter)")
+    logger.info(f"LLM generation completed ({len(raw_output)} characters)")
 
     sections = parse_assessment_output(raw_output)
 
@@ -195,9 +195,7 @@ def save_approved_assessment(
     Returns:
         int: task_id yang tersimpan
     """
-    print("=" * 60)
-    print(f"MENYIMPAN ASSESSMENT YANG DISETUJUI")
-    print("=" * 60)
+    logger.info("Saving approved assessment to database")
 
     sections = assessment_data.get('sections', {})
     metadata = assessment_data.get('metadata', {})
@@ -227,12 +225,12 @@ def save_approved_assessment(
             task_id = cur.lastrowid
 
             conn.commit()
-            print(f"✓ Assessment tersimpan dengan task_id: {task_id}")
+            logger.info(f"Assessment saved with task_id: {task_id}")
             return task_id
 
     except Exception as e:
         conn.rollback()
-        print(f"✗ Kesalahan database: {str(e)}")
+        logger.error(f"Database error: {str(e)}")
         raise e
 
     finally:
@@ -283,19 +281,16 @@ def create_rag_generated_task(
     """
     is_replace_mode = existing_task_id is not None
     
-    print("=" * 60)
-    print(f"{'MENGGANTI DRAFT' if is_replace_mode else 'MEMBUAT'} ASSESSMENT TASK BARU")
-    print("=" * 60)
-    print(f"Subject: {subject_name} (ID: {subject_id})")
-    print(f"Session: {topic} (ID: {session_id})")
-    print(f"Context chunks: {len(context_snippets)}")
+    logger.info(f"{'Replacing draft' if is_replace_mode else 'Creating'} assessment task")
+    logger.debug(f"Subject: {subject_name} (ID: {subject_id})")
+    logger.debug(f"Session: {topic} (ID: {session_id})")
+    logger.debug(f"Context chunks: {len(context_snippets)}")
     if custom_notes:
-        print(f"Catatan khusus: {custom_notes}")
+        logger.debug(f"Custom notes: {custom_notes}")
     if is_replace_mode:
-        print(f"Mode replace: memperbarui task_id={existing_task_id}")
-    print("=" * 60)
+        logger.debug(f"Replace mode: updating task_id={existing_task_id}")
     
-    print("\nMemanggil LLM untuk menghasilkan teks...")
+    logger.info("Calling LLM to generate text...")
     raw_output = generate_assessment_description(
         subject_name=subject_name,
         topic=topic,
@@ -309,15 +304,15 @@ def create_rag_generated_task(
     if not raw_output or not raw_output.strip():
         raise Exception("LLM tidak mengembalikan output")
     
-    print(f"✓ LLM generation selesai ({len(raw_output)} karakter)")
+    logger.info(f"LLM generation completed ({len(raw_output)} characters)")
     
     required_tags = ["#SOAL", "#REQUIREMENTS", "#EXPECTED OUTPUT", "#KUNCI JAWABAN"]
     missing_tags = [tag for tag in required_tags if tag not in raw_output]
     
     if missing_tags:
-        print(f"⚠️ Tag tidak lengkap: {', '.join(missing_tags)}")
+        logger.warning(f"Missing tags: {', '.join(missing_tags)}")
     else:
-        print(f"✓ Semua tag lengkap")
+        logger.debug("All tags present")
     
     generation_metadata = {
         "session_id": session_id,
@@ -328,13 +323,13 @@ def create_rag_generated_task(
         "is_replacement": is_replace_mode
     }
     
-    print("\nMenyimpan data ke database...")
+    logger.info("Saving to database...")
     conn = get_connection()
     
     try:
         with conn.cursor() as cur:
             if is_replace_mode:
-                print(f"Memperbarui draft task_id={existing_task_id}...")
+                logger.debug(f"Updating draft task_id={existing_task_id}...")
                 cur.execute("""
                     UPDATE assessment_task SET
                         description = %s,
@@ -347,11 +342,11 @@ def create_rag_generated_task(
                     existing_task_id
                 ))
                 task_id = existing_task_id
-                action = "diperbarui"
-                print(f"✓ Task {task_id} berhasil diperbarui")
+                action = "updated"
+                logger.info(f"Task {task_id} updated successfully")
                 
             else:
-                print("Membuat assessment baru...")
+                logger.debug("Creating new assessment...")
                 cur.execute("""
                     INSERT INTO assessment_task (
                         name, title, description, id_subject, id_score_component,
@@ -369,17 +364,17 @@ def create_rag_generated_task(
                     datetime.now()
                 ))
                 task_id = cur.lastrowid
-                action = "dibuat"
-                print(f"✓ Task {task_id} berhasil dibuat")
+                action = "created"
+                logger.info(f"Task {task_id} created successfully")
             
             conn.commit()
-            print(f"✓ Assessment berhasil {action} dan disimpan")
+            logger.info(f"Assessment {action} and saved")
             
             return task_id
             
     except Exception as e:
         conn.rollback()
-        print(f"✗ Kesalahan database: {str(e)}")
+        logger.error(f"Database error: {str(e)}")
         raise e
         
     finally:

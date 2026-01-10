@@ -1,10 +1,13 @@
 import os
 import json
 import time
+import logging
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClientError(Exception):
@@ -53,8 +56,9 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
         if "role" not in msg or "content" not in msg:
             raise ValueError(f"Message {i} tidak memiliki 'role' atau 'content'")
     
-    # Hardcode ke OpenAI GPT-OSS 120B
-    model_name = model or "openai/gpt-oss-120b:free"
+    # Model from env var, default to GPT-OSS 120B
+    default_model = "openai/gpt-oss-120b:free"
+    model_name = model or os.getenv("LLM_MODEL", default_model)
     
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
@@ -72,39 +76,37 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
         "top_p": 0.9,
     }
     
-    print(f"\n[DEBUG] Model: {model_name}")
-    print(f"[DEBUG] API Key: {api_key[:20]}...{api_key[-10:]}")
-    print(f"[DEBUG] Jumlah messages: {len(messages)}")
+    logger.debug(f"Model: {model_name}")
+    logger.debug(f"API Key: {api_key[:20]}...{api_key[-10:]}")
+    logger.debug(f"Message count: {len(messages)}")
     for i, msg in enumerate(messages):
-        print(f"  [{i}] role={msg['role']}, panjang={len(msg.get('content', ''))}")
+        logger.debug(f"  [{i}] role={msg['role']}, length={len(msg.get('content', ''))}")
     
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"\n[LLM Request] Percobaan {attempt}/{max_retries}")
+            logger.info(f"LLM Request attempt {attempt}/{max_retries}")
             response = requests.post(url, headers=headers, json=payload, timeout=timeout)
             
-            print(f"[Response] Status: {response.status_code}")
+            logger.debug(f"Response status: {response.status_code}")
             
             if 'x-ratelimit-remaining' in response.headers:
-                print(f"[Response] Rate limit tersisa: {response.headers['x-ratelimit-remaining']}")
+                logger.debug(f"Rate limit remaining: {response.headers['x-ratelimit-remaining']}")
             
             if response.status_code == 429:
-                # Rate limit - fail faster karena pasti tidak akan berhasil
-                # Tapi tetap beri kesempatan beberapa kali jika rate limit sesaat
-                if attempt >= 5:  # Max 5 retries untuk rate limit
+                if attempt >= 5:
                     raise RateLimitError(
                         "Rate limit tercapai. API OpenRouter sedang sibuk. "
                         "Silakan tunggu beberapa menit dan coba lagi."
                     )
-                wait_time = min(2 ** attempt, 15)  # Max wait 15 seconds
-                print(f"⚠️ Rate limit. Mencoba ulang dalam {wait_time} detik (attempt {attempt}/5)...")
+                wait_time = min(2 ** attempt, 15)
+                logger.warning(f"Rate limit hit. Retrying in {wait_time}s (attempt {attempt}/5)")
                 time.sleep(wait_time)
                 continue
             
             if response.status_code != 200:
                 error_detail = response.text
-                print(f"✗ HTTP Error {response.status_code}")
-                print(f"Response body: {error_detail[:1000]}")
+                logger.error(f"HTTP Error {response.status_code}")
+                logger.debug(f"Response body: {error_detail[:1000]}")
                 
                 try:
                     error_json = response.json()
@@ -112,14 +114,14 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
                         error_msg = error_json["error"]
                         if isinstance(error_msg, dict):
                             error_msg = error_msg.get("message", str(error_msg))
-                        print(f"Pesan error API: {error_msg}")
+                        logger.error(f"API error message: {error_msg}")
                         raise ModelError(f"OpenRouter API Error: {error_msg}")
                 except json.JSONDecodeError:
                     pass
                 
                 if attempt < max_retries:
                     wait_time = min(2 ** attempt, 16)
-                    print(f"Mencoba ulang dalam {wait_time} detik...")
+                    logger.info(f"Retrying in {wait_time}s...")
                     time.sleep(wait_time)
                     continue
                 else:
@@ -128,11 +130,11 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
             try:
                 data = response.json()
             except json.JSONDecodeError as e:
-                print(f"✗ Gagal parsing JSON response: {str(e)}")
-                print(f"Raw response: {response.text[:500]}")
+                logger.error(f"Failed to parse JSON response: {str(e)}")
+                logger.debug(f"Raw response: {response.text[:500]}")
                 raise ModelError(f"Response JSON tidak valid dari API: {str(e)}")
             
-            print(f"[DEBUG] Response keys: {list(data.keys())}")
+            logger.debug(f"Response keys: {list(data.keys())}")
             
             if "error" in data:
                 error_info = data["error"]
@@ -140,78 +142,78 @@ def call_openrouter(messages, model=None, max_retries=10, timeout=120):
                     error_msg = error_info.get("message", str(error_info))
                 else:
                     error_msg = str(error_info)
-                print(f"✗ API mengembalikan error: {error_msg}")
+                logger.error(f"API returned error: {error_msg}")
                 raise ModelError(f"OpenRouter API Error: {error_msg}")
             
             if "choices" not in data:
-                print(f"✗ Response tidak memiliki field 'choices'")
-                print(f"Field tersedia: {list(data.keys())}")
-                print(f"Full response: {json.dumps(data, indent=2)[:1000]}")
+                logger.error("Response missing 'choices' field")
+                logger.debug(f"Available fields: {list(data.keys())}")
+                logger.debug(f"Full response: {json.dumps(data, indent=2)[:1000]}")
                 
                 if "model" in data and "status" in data:
                     if data.get("status") == "loading":
                         wait_time = min(2 ** attempt, 30)
-                        print(f"⚠️ Model masih loading. Menunggu {wait_time} detik...")
+                        logger.warning(f"Model still loading. Waiting {wait_time}s...")
                         time.sleep(wait_time)
                         continue
                 
                 raise ModelError(f"Response tidak memiliki field 'choices'. Response: {json.dumps(data)[:500]}")
             
             if len(data["choices"]) == 0:
-                print(f"✗ Array choices kosong")
+                logger.error("Empty choices array")
                 raise ModelError("Array 'choices' di response kosong")
             
             choice = data["choices"][0]
             if "message" not in choice:
-                print(f"✗ Choice tidak memiliki field 'message'")
-                print(f"Struktur choice: {json.dumps(choice, indent=2)}")
+                logger.error("Choice missing 'message' field")
+                logger.debug(f"Choice structure: {json.dumps(choice, indent=2)}")
                 raise ModelError("Choice tidak memiliki field 'message'")
             
             content = choice["message"].get("content", "")
             if not content:
-                print(f"✗ Message content kosong")
+                logger.error("Empty message content")
                 raise ModelError("Konten message kosong")
             
             finish_reason = choice.get("finish_reason", "")
             
             if finish_reason == "length":
-                print("⚠️ Response terpotong (mencapai batas max_tokens)")
+                logger.warning("Response truncated (max_tokens limit reached)")
             
             if "usage" in data:
                 usage = data["usage"]
-                print(f"✓ Tokens: {usage.get('total_tokens', 'N/A')} "
-                      f"(prompt: {usage.get('prompt_tokens', 'N/A')}, "
-                      f"completion: {usage.get('completion_tokens', 'N/A')})")
+                logger.info(f"Tokens used: {usage.get('total_tokens', 'N/A')} "
+                           f"(prompt: {usage.get('prompt_tokens', 'N/A')}, "
+                           f"completion: {usage.get('completion_tokens', 'N/A')})")
 
-            print(f"✓ Berhasil menghasilkan {len(content)} karakter")
+            logger.info(f"Successfully generated {len(content)} characters")
             return content
         
         except ModelError:
             if attempt < max_retries:
                 wait_time = min(2 ** attempt, 16)
-                print(f"Mencoba ulang dalam {wait_time} detik...")
+                logger.info(f"Retrying in {wait_time}s...")
                 time.sleep(wait_time)
                 continue
             else:
                 raise
         
         except requests.exceptions.Timeout:
-            print(f"⚠️ Timeout pada percobaan {attempt} (menunggu {timeout} detik)")
+            logger.warning(f"Timeout on attempt {attempt} (waited {timeout}s)")
             if attempt < max_retries:
                 time.sleep(2 ** attempt)
             else:
                 raise LLMClientError(f"Timeout setelah {max_retries} percobaan")
         
         except requests.exceptions.RequestException as e:
-            print(f"⚠️ Request error: {str(e)}")
+            logger.warning(f"Request error: {str(e)}")
             if attempt < max_retries:
                 time.sleep(2 ** attempt)
             else:
                 raise LLMClientError(f"Request gagal: {str(e)}")
         
         except json.JSONDecodeError as e:
-            print(f"⚠️ Response JSON tidak valid pada percobaan {attempt}: {str(e)}")
-            print(f"Raw response: {response.text[:500]}")
+            logger.warning(f"Invalid JSON response on attempt {attempt}: {str(e)}")
+            logger.debug(f"Raw response: {response.text[:500]}")
             if attempt < max_retries:
                 time.sleep(2)
             else:

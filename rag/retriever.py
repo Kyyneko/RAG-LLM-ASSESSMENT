@@ -1,14 +1,17 @@
 import numpy as np
 import os
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 try:
     from sentence_transformers import CrossEncoder
     CROSS_ENCODER_AVAILABLE = True
-    print("[OK] CrossEncoder berhasil diimpor")
+    logger.info("CrossEncoder imported successfully")
 except ImportError:
     CROSS_ENCODER_AVAILABLE = False
-    print("[WARNING] CrossEncoder tidak tersedia dari sentence_transformers")
+    logger.warning("CrossEncoder not available from sentence_transformers")
 
 class CrossEncoderReranker:
     """CrossEncoder reranker untuk meningkatkan presisi retrieval."""
@@ -26,15 +29,15 @@ class CrossEncoderReranker:
 
         if CROSS_ENCODER_AVAILABLE:
             try:
-                print(f"Memuat model CrossEncoder: {model_name}")
+                logger.info(f"Loading CrossEncoder model: {model_name}")
                 self.model = CrossEncoder(model_name)
                 self.is_loaded = True
-                print(f"✓ Model CrossEncoder berhasil dimuat")
+                logger.info("CrossEncoder model loaded successfully")
             except Exception as e:
-                print(f"⚠️ Gagal memuat model CrossEncoder: {e}")
-                print("Fallback ke similarity-based scoring")
+                logger.warning(f"Failed to load CrossEncoder model: {e}")
+                logger.info("Fallback to similarity-based scoring")
         else:
-            print("⚠️ CrossEncoder tidak tersedia, install sentence_transformers")
+            logger.warning("CrossEncoder not available, install sentence_transformers")
 
     def rerank(self, query: str, documents: list[str], top_k: int = 10) -> list[dict]:
         """
@@ -69,7 +72,7 @@ class CrossEncoderReranker:
             return results[:top_k]
 
         except Exception as e:
-            print(f"✗ CrossEncoder reranking gagal: {e}")
+            logger.error(f"CrossEncoder reranking failed: {e}")
             return [{"text": doc, "score": 0.5} for doc in documents]
 
     def is_available(self) -> bool:
@@ -101,14 +104,14 @@ def retrieve_context(vectorstore, embedder, query: str, top_k: int = 5) -> list[
         list[str]: Daftar potongan teks paling relevan.
     """
     if not query or not query.strip():
-        print("⚠️ Query kosong, tidak ada konteks yang diambil")
+        logger.warning("Empty query, no context retrieved")
         return []
 
     query_vec = embedder.encode([query])
 
     results = vectorstore.search(query_vec, top_k)
 
-    print(f"Ditemukan {len(results)} konteks paling relevan untuk query: {query[:100]}...")
+    logger.debug(f"Found {len(results)} relevant contexts for query: {query[:100]}...")
     return results
 
 
@@ -139,21 +142,21 @@ def retrieve_context_with_reranking(vectorstore, embedder, query: str,
             [{"text": "...", "score": 0.85, "metadata": {...}}, ...]
     """
     if not query or not query.strip():
-        print("⚠️ Query kosong")
+        logger.warning("Empty query")
         return []
 
     query_vec = embedder.encode([query])
     candidates = vectorstore.search_with_scores(query_vec, initial_k)
 
     if not candidates:
-        print("Tidak ada kandidat yang ditemukan")
+        logger.debug("No candidates found")
         return []
 
     cross_encoder_reranker = get_cross_encoder_reranker()
 
     if cross_encoder_reranker and cross_encoder_reranker.is_available():
         try:
-            print(f"✓ Menggunakan CrossEncoder reranking untuk {len(candidates)} kandidat")
+            logger.debug(f"Using CrossEncoder reranking for {len(candidates)} candidates")
 
             candidate_texts = [cand["text"] for cand in candidates]
 
@@ -166,14 +169,13 @@ def retrieve_context_with_reranking(vectorstore, embedder, query: str,
                 cand["reranked"] = True
 
             candidates.sort(key=lambda x: x["score"], reverse=True)
-            print(f"✓ CrossEncoder reranking selesai untuk {len(candidates)} kandidat")
+            logger.debug(f"CrossEncoder reranking completed for {len(candidates)} candidates")
 
         except Exception as e:
-            print(f"⚠️ CrossEncoder reranking gagal, menggunakan similarity score: {e}")
-            print(f"Fallback ke similarity-based retrieval")
+            logger.warning(f"CrossEncoder reranking failed, using similarity score: {e}")
     elif reranker is not None:
         try:
-            print(f"✓ Menggunakan manual reranker untuk {len(candidates)} kandidat")
+            logger.debug(f"Using manual reranker for {len(candidates)} candidates")
 
             pairs = [[query, cand["text"]] for cand in candidates]
             rerank_scores = reranker.predict(pairs)
@@ -185,11 +187,11 @@ def retrieve_context_with_reranking(vectorstore, embedder, query: str,
                 cand["reranked"] = True
 
             candidates.sort(key=lambda x: x["score"], reverse=True)
-            print(f"✓ Manual reranking selesai: {len(candidates)} kandidat")
+            logger.debug(f"Manual reranking completed: {len(candidates)} candidates")
         except Exception as e:
-            print(f"⚠️ Manual reranking gagal, menggunakan similarity score: {e}")
+            logger.warning(f"Manual reranking failed, using similarity score: {e}")
     else:
-        print("ℹ️ Tidak ada reranker tersedia, menggunakan similarity scores saja")
+        logger.debug("No reranker available, using similarity scores only")
 
     filtered = [
         cand for cand in candidates
@@ -198,7 +200,7 @@ def retrieve_context_with_reranking(vectorstore, embedder, query: str,
 
     results = filtered[:top_k]
 
-    print(f"Ditemukan {len(results)} konteks (setelah reranking & filtering)")
+    logger.info(f"Found {len(results)} contexts (after reranking & filtering)")
     return results
 
 

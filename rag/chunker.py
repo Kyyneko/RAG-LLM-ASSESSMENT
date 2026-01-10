@@ -1,4 +1,4 @@
-def create_chunks(text: str, max_chars: int = 1500, overlap: int = 300):
+def create_chunks(text: str, max_chars: int = 1000, overlap: int = 200):
     """
     Memecah teks dengan mempertimbangkan struktur semantik (paragraf dan kalimat).
     
@@ -110,7 +110,7 @@ def _split_into_sentences(text: str) -> list[str]:
     return [s.strip() for s in sentences if s.strip()]
 
 
-def create_chunks_list(text: str, max_chars: int = 1500, overlap: int = 300) -> list[str]:
+def create_chunks_list(text: str, max_chars: int = 1000, overlap: int = 200) -> list[str]:
     """
     Versi berbasis list dari fungsi create_chunks().
     Mengubah generator menjadi list untuk kemudahan penggunaan.

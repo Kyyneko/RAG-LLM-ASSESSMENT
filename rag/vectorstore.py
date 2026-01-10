@@ -2,6 +2,9 @@ import faiss
 import numpy as np
 import pickle
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VectorStore:
     """
@@ -31,7 +34,7 @@ class VectorStore:
         self.index = faiss.IndexFlatIP(dim)
         self.texts = []
         self.metadata = []
-        print(f"VectorStore diinisialisasi dengan dimensi embedding: {dim}")
+        logger.debug(f"VectorStore initialized with embedding dimension: {dim}")
     
     def add(self, embeddings: np.ndarray, texts: list[str], metadata: list[dict] = None) -> None:
         """
@@ -44,7 +47,7 @@ class VectorStore:
                 Format: [{"source": "file.pdf", "subject_id": 5, "chunk_index": 0}, ...]
         """
         if embeddings is None or len(embeddings) == 0:
-            print("⚠️ Tidak ada embedding yang ditambahkan ke vector store")
+            logger.warning("No embeddings to add to vector store")
             return
         
         if len(embeddings.shape) == 1:
@@ -93,7 +96,7 @@ class VectorStore:
         k_candidates = min(top_k * 4 if filter_fn else top_k, len(self.texts))
         
         if k_candidates == 0:
-            print("⚠️ VectorStore masih kosong")
+            logger.warning("VectorStore is empty")
             return []
         
         distances, indices = self.index.search(query_vector, k_candidates)
@@ -132,7 +135,7 @@ class VectorStore:
                 'dim': self.dim
             }, f)
         
-        print(f"✓ Vector store disimpan ke {index_path}")
+        logger.info(f"Vector store saved to {index_path}")
     
     @classmethod
     def load_from_disk(cls, index_path: str, data_path: str):
@@ -155,7 +158,7 @@ class VectorStore:
         instance.texts = data['texts']
         instance.metadata = data.get('metadata', [])
         
-        print(f"✓ Vector store dimuat dari cache: {len(instance.texts)} chunks")
+        logger.info(f"Vector store loaded from cache: {len(instance.texts)} chunks")
         return instance
     
     def get_stats(self) -> dict:
