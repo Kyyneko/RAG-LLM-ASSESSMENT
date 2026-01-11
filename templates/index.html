@@ -5,14 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SI-LAB RAG Assessment Generator API</title>
+    <meta name="description" content="API untuk generate soal praktikum otomatis menggunakan RAG & LLM">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         body {
@@ -60,55 +67,117 @@
             left: -200px;
         }
 
-        .container {
-            position: relative;
-            z-index: 1;
-            max-width: 1000px;
+        .glow-orb.green {
+            background: #10b981;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.08;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(15, 15, 35, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+            padding: 0 24px;
+        }
+
+        .nav-container {
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 60px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        .logo {
-            display: inline-flex;
+        .nav-logo {
+            display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 24px;
+            text-decoration: none;
+            color: #fff;
         }
 
-        .logo-icon {
-            width: 56px;
-            height: 56px;
+        .nav-logo-icon {
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, #8b5cf6, #6366f1);
-            border-radius: 16px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+            font-size: 20px;
         }
 
-        h1 {
-            font-size: 2.5rem;
+        .nav-logo-text {
             font-weight: 700;
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 12px;
-        }
-
-        .subtitle {
             font-size: 1.1rem;
-            color: #94a3b8;
-            font-weight: 400;
         }
 
-        .status-badge {
+        .nav-links {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .nav-cta {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+            color: #fff !important;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 24px 80px;
+        }
+
+        .hero-content {
+            max-width: 800px;
+        }
+
+        .hero-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -118,10 +187,10 @@
             border-radius: 100px;
             font-size: 0.875rem;
             color: #4ade80;
-            margin-top: 20px;
+            margin-bottom: 24px;
         }
 
-        .status-dot {
+        .hero-badge .dot {
             width: 8px;
             height: 8px;
             background: #4ade80;
@@ -134,155 +203,289 @@
             0%,
             100% {
                 opacity: 1;
+                transform: scale(1);
             }
 
             50% {
                 opacity: 0.5;
+                transform: scale(0.9);
             }
         }
 
-        .version {
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 24px;
+            line-height: 1.1;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: #fff;
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(139, 92, 246, 0.5);
+        }
+
+        .btn-secondary {
             background: rgba(99, 102, 241, 0.1);
             border: 1px solid rgba(99, 102, 241, 0.3);
-            padding: 4px 12px;
-            border-radius: 100px;
-            font-size: 0.75rem;
             color: #a5b4fc;
-            margin-left: 12px;
         }
 
-        .cards-grid {
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        /* Section Styling */
+        section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 24px;
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Features Section */
+        #features {
+            background: rgba(15, 15, 35, 0.5);
+        }
+
+        .features-grid {
             display: grid;
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
         }
 
-        .card {
+        .feature-card {
             background: rgba(30, 30, 60, 0.6);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(99, 102, 241, 0.15);
             border-radius: 20px;
-            padding: 28px;
+            padding: 32px;
             transition: all 0.3s ease;
         }
 
-        .card:hover {
+        .feature-card:hover {
             border-color: rgba(99, 102, 241, 0.4);
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(-8px);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
         }
 
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .card-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-        }
-
-        .card-icon.generate {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
-
-        .card-icon.subjects {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-        }
-
-        .card-icon.modules {
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .card-description {
-            color: #94a3b8;
-            font-size: 0.95rem;
-            line-height: 1.6;
+            font-size: 28px;
             margin-bottom: 20px;
         }
 
-        .endpoint-box {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 12px;
-            padding: 16px;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        .feature-icon.purple {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
         }
 
-        .method-badge {
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
+        .feature-icon.blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .feature-icon.green {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .feature-icon.orange {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .feature-icon.pink {
+            background: linear-gradient(135deg, #ec4899, #db2777);
+        }
+
+        .feature-icon.cyan {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
             font-weight: 600;
-            text-transform: uppercase;
+            color: #fff;
+            margin-bottom: 12px;
         }
 
-        .method-badge.post {
+        .feature-card p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* API Endpoints Section */
+        #endpoints .endpoints-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .endpoint-card {
+            background: rgba(30, 30, 60, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .endpoint-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .endpoint-method {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+            flex-shrink: 0;
+        }
+
+        .endpoint-method.post {
             background: #f59e0b;
             color: #000;
         }
 
-        .method-badge.get {
+        .endpoint-method.get {
             background: #3b82f6;
             color: #fff;
         }
 
+        .endpoint-info {
+            flex: 1;
+        }
+
         .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
             color: #e4e4f0;
+            margin-bottom: 8px;
         }
 
-        .tech-stack {
-            margin-top: 60px;
+        .endpoint-desc {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        /* Tech Stack Section */
+        #tech {
+            background: rgba(15, 15, 35, 0.5);
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 20px;
+        }
+
+        .tech-card {
+            background: rgba(30, 30, 60, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 16px;
+            padding: 28px 20px;
             text-align: center;
+            transition: all 0.3s ease;
         }
 
-        .tech-title {
-            font-size: 0.875rem;
+        .tech-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-4px);
+        }
+
+        .tech-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .tech-card .name {
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .tech-card .desc {
             color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 24px;
+            font-size: 0.75rem;
         }
 
-        .tech-icons {
-            display: flex;
-            justify-content: center;
-            gap: 32px;
-            flex-wrap: wrap;
-        }
-
-        .tech-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            color: #64748b;
-            font-size: 0.8rem;
-        }
-
-        .tech-item span {
-            font-size: 2rem;
-        }
-
+        /* Footer */
         footer {
-            margin-top: 60px;
+            position: relative;
+            z-index: 1;
             text-align: center;
+            padding: 40px 24px;
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        footer p {
             color: #64748b;
             font-size: 0.875rem;
         }
@@ -296,18 +499,118 @@
             text-decoration: underline;
         }
 
-        @media (max-width: 640px) {
-            h1 {
-                font-size: 1.75rem;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
             }
 
-            .container {
-                padding: 40px 16px;
+            .mobile-menu-btn {
+                display: block;
             }
 
-            .card {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .section-header h2 {
+                font-size: 2rem;
+            }
+
+            .endpoint-card {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            nav {
+                padding: 0 16px;
+            }
+
+            .nav-container {
+                height: 60px;
+            }
+
+            .nav-logo-text {
+                display: none;
+            }
+
+            .hero {
+                padding: 100px 16px 60px;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            section {
+                padding: 60px 16px;
+            }
+
+            .section-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .feature-card {
+                padding: 24px;
+            }
+
+            .endpoint-card {
                 padding: 20px;
             }
+
+            .glow-orb {
+                width: 300px;
+                height: 300px;
+            }
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: rgba(15, 15, 35, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+            z-index: 999;
+        }
+
+        .mobile-menu.active {
+            display: block;
+        }
+
+        .mobile-menu a {
+            display: block;
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 14px 0;
+            font-size: 1rem;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .mobile-menu a:last-child {
+            border: none;
+        }
+
+        .mobile-menu a:hover {
+            color: #fff;
         }
     </style>
 </head>
@@ -316,97 +619,208 @@
     <div class="bg-grid"></div>
     <div class="glow-orb purple"></div>
     <div class="glow-orb blue"></div>
+    <div class="glow-orb green"></div>
 
-    <div class="container">
-        <header>
-            <div class="logo">
-                <div class="logo-icon">🤖</div>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <div class="nav-logo-icon">🤖</div>
+                <span class="nav-logo-text">SI-LAB RAG</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Fitur</a>
+                <a href="#endpoints">API</a>
+                <a href="#tech">Teknologi</a>
+                <a href="https://github.com/Kyyneko/RAG-LLM-ASSESSMENT" target="_blank" class="nav-cta">GitHub</a>
+            </div>
+            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#features" onclick="toggleMenu()">Fitur</a>
+        <a href="#endpoints" onclick="toggleMenu()">API Endpoints</a>
+        <a href="#tech" onclick="toggleMenu()">Teknologi</a>
+        <a href="https://github.com/Kyyneko/RAG-LLM-ASSESSMENT" target="_blank">GitHub</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                API Running • v2.0
             </div>
             <h1>SI-LAB RAG Assessment Generator</h1>
-            <p class="subtitle">API untuk generate soal praktikum otomatis menggunakan RAG & LLM</p>
-            <div class="status-badge">
-                <span class="status-dot"></span>
-                API Running
-                <span class="version">v2.0</span>
+            <p>Generate soal praktikum berkualitas tinggi secara otomatis menggunakan Retrieval-Augmented Generation dan
+                Large Language Model</p>
+            <div class="hero-buttons">
+                <a href="#endpoints" class="btn btn-primary">
+                    📚 Lihat API Docs
+                </a>
+                <a href="https://github.com/Kyyneko/RAG-LLM-ASSESSMENT" target="_blank" class="btn btn-secondary">
+                    ⭐ Star di GitHub
+                </a>
             </div>
-        </header>
+        </div>
+    </section>
 
-        <div class="cards-grid">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon generate">⚡</div>
-                    <h2 class="card-title">Generate Assessment</h2>
-                </div>
-                <p class="card-description">
-                    Generate soal praktikum otomatis berdasarkan modul dan tingkat kesulitan.
-                    Menggunakan RAG untuk mengambil konteks relevan dari materi modul.
-                </p>
-                <div class="endpoint-box">
-                    <span class="method-badge post">POST</span>
-                    <span class="endpoint-path">/api/rag/generate</span>
-                </div>
+    <!-- Features Section -->
+    <section id="features">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>Fitur Utama</h2>
+                <p>Sistem assessment generator dengan teknologi AI terdepan</p>
             </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon subjects">📚</div>
-                    <h2 class="card-title">Get Subjects</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon purple">🔍</div>
+                    <h3>RAG Pipeline</h3>
+                    <p>Retrieval-Augmented Generation untuk mengambil konteks relevan dari modul praktikum secara
+                        akurat.</p>
                 </div>
-                <p class="card-description">
-                    Mengambil daftar semua mata kuliah (subject) yang tersedia di sistem untuk pilihan dropdown.
-                </p>
-                <div class="endpoint-box">
-                    <span class="method-badge get">GET</span>
-                    <span class="endpoint-path">/api/rag/subjects</span>
+                <div class="feature-card">
+                    <div class="feature-icon blue">🧠</div>
+                    <h3>Two-Stage Retrieval</h3>
+                    <p>FAISS untuk pencarian cepat, CrossEncoder untuk reranking akurat dengan relevancy 74.1%.</p>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon modules">📄</div>
-                    <h2 class="card-title">Get Modules by Subject</h2>
+                <div class="feature-card">
+                    <div class="feature-icon green">📝</div>
+                    <h3>Structured Output</h3>
+                    <p>Output terstruktur dengan #SOAL, #REQUIREMENTS, #EXPECTED OUTPUT, dan #KUNCI JAWABAN.</p>
                 </div>
-                <p class="card-description">
-                    Mengambil daftar modul praktikum berdasarkan subject yang dipilih.
-                </p>
-                <div class="endpoint-box">
-                    <span class="method-badge get">GET</span>
-                    <span class="endpoint-path">/api/rag/subjects/{subject_id}/modules</span>
+                <div class="feature-card">
+                    <div class="feature-icon orange">🎯</div>
+                    <h3>Dynamic Difficulty</h3>
+                    <p>Parameter retrieval menyesuaikan tingkat kesulitan: Mudah, Sedang, atau Sulit.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon pink">📚</div>
+                    <h3>Curriculum-Aware</h3>
+                    <p>Sistem memahami urutan kurikulum dan hanya menggunakan konsep yang sudah diajarkan.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon cyan">🔒</div>
+                    <h3>Secure API</h3>
+                    <p>API Key authentication dan rate limiting untuk keamanan dan stabilitas layanan.</p>
                 </div>
             </div>
         </div>
+    </section>
 
-        <div class="tech-stack">
-            <p class="tech-title">Powered By</p>
-            <div class="tech-icons">
-                <div class="tech-item">
-                    <span>🐍</span>
-                    <p>Python</p>
+    <!-- API Endpoints Section -->
+    <section id="endpoints">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>API Endpoints</h2>
+                <p>REST API endpoints untuk integrasi dengan aplikasi Anda</p>
+            </div>
+            <div class="endpoints-grid">
+                <div class="endpoint-card">
+                    <span class="endpoint-method post">POST</span>
+                    <div class="endpoint-info">
+                        <div class="endpoint-path">/api/rag/generate</div>
+                        <div class="endpoint-desc">Generate soal praktikum berdasarkan modul, topik, dan tingkat
+                            kesulitan yang dipilih.</div>
+                    </div>
                 </div>
-                <div class="tech-item">
-                    <span>🌶️</span>
-                    <p>Flask</p>
+                <div class="endpoint-card">
+                    <span class="endpoint-method get">GET</span>
+                    <div class="endpoint-info">
+                        <div class="endpoint-path">/api/rag/subjects</div>
+                        <div class="endpoint-desc">Mengambil daftar semua mata kuliah (subject) yang tersedia di sistem.
+                        </div>
+                    </div>
                 </div>
-                <div class="tech-item">
-                    <span>�</span>
-                    <p>GPT-OSS 120B</p>
-                </div>
-                <div class="tech-item">
-                    <span>🔍</span>
-                    <p>FAISS</p>
-                </div>
-                <div class="tech-item">
-                    <span>🐳</span>
-                    <p>Docker</p>
+                <div class="endpoint-card">
+                    <span class="endpoint-method get">GET</span>
+                    <div class="endpoint-info">
+                        <div class="endpoint-path">/api/rag/subjects/{subject_id}/modules</div>
+                        <div class="endpoint-desc">Mengambil daftar modul praktikum berdasarkan mata kuliah yang
+                            dipilih.</div>
+                    </div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <footer>
-            <p>© 2026 SI-LAB Assessment Generator | <a href="https://github.com/Kyyneko/RAG-LLM-ASSESSMENT"
-                    target="_blank">GitHub Repository</a></p>
-        </footer>
-    </div>
+    <!-- Tech Stack Section -->
+    <section id="tech">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>Teknologi</h2>
+                <p>Dibangun dengan teknologi modern dan efisien</p>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <div class="icon">🐍</div>
+                    <div class="name">Python</div>
+                    <div class="desc">Backend</div>
+                </div>
+                <div class="tech-card">
+                    <div class="icon">🌶️</div>
+                    <div class="name">Flask</div>
+                    <div class="desc">Web Framework</div>
+                </div>
+                <div class="tech-card">
+                    <div class="icon">🤖</div>
+                    <div class="name">GPT-OSS 120B</div>
+                    <div class="desc">LLM Model</div>
+                </div>
+                <div class="tech-card">
+                    <div class="icon">🔍</div>
+                    <div class="name">FAISS</div>
+                    <div class="desc">Vector Search</div>
+                </div>
+                <div class="tech-card">
+                    <div class="icon">🔄</div>
+                    <div class="name">CrossEncoder</div>
+                    <div class="desc">Reranking</div>
+                </div>
+                <div class="tech-card">
+                    <div class="icon">🐳</div>
+                    <div class="name">Docker</div>
+                    <div class="desc">Containerization</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 SI-LAB Assessment Generator | Lab Sistem Informasi, Universitas Hasanuddin</p>
+        <p style="margin-top: 8px;">
+            <a href="https://github.com/Kyyneko/RAG-LLM-ASSESSMENT" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function (e) {
+            const menu = document.getElementById('mobileMenu');
+            const btn = document.querySelector('.mobile-menu-btn');
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.remove('active');
+            }
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
