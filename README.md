@@ -22,6 +22,8 @@ Sistem **Retrieval-Augmented Generation (RAG)** untuk otomatis generate soal pra
 - [Konfigurasi Mata Kuliah](#konfigurasi-mata-kuliah)
 - [Tingkat Kesulitan](#tingkat-kesulitan)
 - [Deployment](#deployment)
+- [Keamanan API](#keamanan-api)
+- [Performa Sistem](#performa-sistem)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -52,6 +54,7 @@ Proyek ini adalah backend API yang mengotomatisasi pembuatan soal assessment pra
 | **Story-Based Questions** | Menghasilkan soal dengan narasi tokoh dan situasi nyata |
 | **Difficulty Levels** | Mudah, Sedang, Sulit dengan cakupan materi berbeda |
 | **Preview Mode** | Generate tanpa langsung menyimpan ke database |
+| **API Security** | API Key authentication dan rate limiting |
 
 ---
 
@@ -248,6 +251,10 @@ HUGGINGFACE_HUB_TOKEN=your-hf-token
 UPLOAD_FOLDER=upload/
 MAX_FILE_SIZE_MB=50
 LOG_LEVEL=INFO
+
+# API Security
+API_KEYS=key_user1_abc123,key_admin_xyz789
+RATE_LIMIT_PER_MINUTE=10
 ```
 
 ---
@@ -264,6 +271,14 @@ http://localhost:5002/api/rag
 **POST** `/api/rag/generate`
 
 Generate soal assessment berdasarkan modul dan tingkat kesulitan.
+
+> ⚠️ **Requires API Key**: Semua endpoint memerlukan header `X-API-Key`
+
+**Headers:**
+```
+X-API-Key: your-api-key
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
@@ -367,9 +382,10 @@ Mengekstrak teks dari berbagai format dokumen:
 ### 2. Semantic Chunking ([rag/chunker.py](rag/chunker.py))
 
 Memecah dokumen menjadi potongan yang berhubungan:
-- Max chunk size: 1000-1500 karakter
-- Overlap: 200-300 karakter
+- **Max chunk size**: 1000 karakter
+- **Overlap**: 200 karakter (20%)
 - Memisah berdasarkan paragraf dan kalimat
+- Berdasarkan penelitian Wang et al. (2024) - chunk 256 tokens (~1000 chars) memberikan relevancy tertinggi
 
 ### 3. Embedding ([rag/embedder.py](rag/embedder.py))
 
@@ -542,6 +558,73 @@ Expected response:
 ### GitHub Actions Deployment
 
 Proyek ini menggunakan GitHub Actions untuk deployment otomatis ke VPS. Konfigurasi ada di `.github/workflows/deploy.yml`.
+
+**Trigger**: Push ke branch `main`
+
+---
+
+## Keamanan API
+
+Sistem mengimplementasikan mekanisme keamanan untuk melindungi API dari akses tidak sah dan penyalahgunaan.
+
+### API Key Authentication
+
+Semua endpoint memerlukan header `X-API-Key` yang valid:
+
+```bash
+curl -X POST http://localhost:5002/api/rag/generate \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"subject_id": 1, "module_id": 1, ...}'
+```
+
+### Rate Limiting
+
+Pembatasan request per menit per API key:
+- Default: **10 request per menit**
+- Konfigurasi via `.env`: `RATE_LIMIT_PER_MINUTE=10`
+
+### Response Codes
+
+| Code | Deskripsi |
+|------|-----------|
+| `200` | Request berhasil |
+| `401` | API Key tidak valid atau tidak ada |
+| `429` | Rate limit terlampaui (coba lagi setelah 60 detik) |
+
+---
+
+## Performa Sistem
+
+Hasil evaluasi sistem berdasarkan pengujian dengan 100+ query dan 120+ request generasi:
+
+### Retrieval Performance
+
+| Metrik | Nilai | Target |
+|--------|-------|--------|
+| P(relevant) Top-K | 74.1% | ≥ 70% ✓ |
+| P(relevant) Top-1 | 76.7% | ≥ 70% ✓ |
+| Success Rate | 100% | 100% ✓ |
+| Avg Response Time | 60.18 ms | < 100 ms ✓ |
+
+### Generation Performance
+
+| Metrik | Nilai | Target |
+|--------|-------|--------|
+| Structure Compliance | 99% | ≥ 80% ✓ |
+| Expert Evaluation | 4.30/5.00 | ≥ 3.41 ✓ |
+| End-to-End Success Rate | 99% | ≥ 95% ✓ |
+| Avg Total Time | 22.65 s | < 60 s ✓ |
+
+### Expert Evaluation (9 Evaluator, 50 Evaluasi)
+
+| Aspek | Skor |
+|-------|------|
+| Relevance | 4.30/5.00 |
+| Structure | 5.00/5.00 |
+| Difficulty Match | 3.92/5.00 |
+| Pedagogical Value | 4.12/5.00 |
+| **Overall** | **4.30/5.00** |
 
 **Trigger**: Push ke branch `main`
 
