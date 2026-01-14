@@ -33,7 +33,7 @@ upload/
 # Model cache
 .cache/
 models/
-hasil/
+# hasil/
 docs/
 
 Modul-Modul-Lab-SI/

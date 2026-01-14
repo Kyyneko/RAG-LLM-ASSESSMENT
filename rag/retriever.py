@@ -21,7 +21,7 @@ class CrossEncoderReranker:
         Inisialisasi CrossEncoder reranker.
 
         Args:
-            model_name: Model CrossEncoder (default: ms-marco-MiniLM-L-6-v2)
+            model_name: Model CrossEncoder (default: ms-marco-TinyBERT-L-2-v2)
         """
         self.model_name = model_name
         self.model = None
@@ -89,30 +89,6 @@ def get_cross_encoder_reranker() -> Optional[CrossEncoderReranker]:
         _cross_encoder_reranker = CrossEncoderReranker("cross-encoder/ms-marco-TinyBERT-L-2-v2")
 
     return _cross_encoder_reranker
-
-def retrieve_context(vectorstore, embedder, query: str, top_k: int = 5) -> list[str]:
-    """
-    Mengambil (retrieve) sejumlah potongan teks yang paling relevan (backward compatible).
-
-    Args:
-        vectorstore: Instance dari kelas VectorStore.
-        embedder: Instance dari kelas Embedder.
-        query (str): Kalimat atau teks pencarian (query).
-        top_k (int, optional): Jumlah hasil teratas (default: 5).
-
-    Returns:
-        list[str]: Daftar potongan teks paling relevan.
-    """
-    if not query or not query.strip():
-        logger.warning("Empty query, no context retrieved")
-        return []
-
-    query_vec = embedder.encode([query])
-
-    results = vectorstore.search(query_vec, top_k)
-
-    logger.debug(f"Found {len(results)} relevant contexts for query: {query[:100]}...")
-    return results
 
 
 def retrieve_context_with_reranking(vectorstore, embedder, query: str,
@@ -202,10 +178,3 @@ def retrieve_context_with_reranking(vectorstore, embedder, query: str,
 
     logger.info(f"Found {len(results)} contexts (after reranking & filtering)")
     return results
-
-
-def retrieve_context_simple(vectorstore, embedder, query: str, top_k: int = 5) -> list[str]:
-    """
-    Alias untuk retrieve_context (untuk backward compatibility).
-    """
-    return retrieve_context(vectorstore, embedder, query, top_k)
