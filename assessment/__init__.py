@@ -1,3 +1,3 @@
-from .generator import create_rag_generated_task
+from .generator import preview_rag_generated_assessment
 
-__all__ = ['create_rag_generated_task']
+__all__ = ['preview_rag_generated_assessment']
