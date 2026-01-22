@@ -11,10 +11,8 @@ def preview_rag_generated_assessment(
     session_id: int,
     topic: str,
     subject_name: str,
-    assistant_id: int,
     context_snippets: list,
     custom_notes: str = None,
-    generated_by: int = None,
     difficulty: str = "Sedang"
 ):
     """
@@ -38,7 +36,6 @@ def preview_rag_generated_assessment(
         custom_notes=custom_notes,
         assessment_task_id=None,
         generation_type="preview",
-        generated_by=generated_by,
         difficulty=difficulty
     )
 
@@ -52,7 +49,6 @@ def preview_rag_generated_assessment(
     preview_metadata = {
         "subject_id": subject_id,
         "session_id": session_id,
-        "assistant_id": assistant_id,
         "topic": topic,
         "subject_name": subject_name,
         "context_count": len(context_snippets),

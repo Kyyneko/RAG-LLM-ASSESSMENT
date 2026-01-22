@@ -144,7 +144,6 @@ def generate_assessment():
         "subject_id": 1,
         "module_id": 1,
         "tingkat_kesulitan": "Sedang",  // Mudah/Sedang/Sulit
-        "assistant_id": 1,
         "notes": "catatan opsional"
     }
 
@@ -175,13 +174,12 @@ def generate_assessment():
         subject_id = data.get("subject_id")
         module_id = data.get("module_id")
         tingkat_kesulitan = data.get("tingkat_kesulitan", "Sedang")
-        assistant_id = data.get("assistant_id")
         notes = data.get("notes", "").strip()
         
-        if not all([subject_id, module_id, assistant_id]):
+        if not all([subject_id, module_id]):
             logger.warning("Field wajib tidak lengkap")
             return jsonify({
-                "error": "subject_id, module_id, dan assistant_id wajib diisi."
+                "error": "subject_id dan module_id wajib diisi."
             }), 400
 
         logger.info(f"Generate request - subject_id={subject_id}, module_id={module_id}, kesulitan={tingkat_kesulitan}")
@@ -301,10 +299,8 @@ def generate_assessment():
             session_id=0,
             topic=topic,
             subject_name=subject_name,
-            assistant_id=assistant_id,
             context_snippets=context_snippets,
             custom_notes=combined_notes,
-            generated_by=assistant_id,
             difficulty=tingkat_kesulitan
         )
 

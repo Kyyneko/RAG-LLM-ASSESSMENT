@@ -32,17 +32,7 @@ upload/
 
 # Model cache
 .cache/
-models/
-# hasil/
-docs/
 
-Modul-Modul-Lab-SI/
 penulisan/
 streamlit_app/
-analyze_evaluations.py
-analyze_comments.py
-analyze_stats.py
-test_generate.py
-dump-silab_db-202512260142.sql
-analyze_assessments_bab3.py
-analysis_output.txt
+CHANGELOG_BAB1.md
